@@ -8,5 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Service extends Model
 {
-    protected $fillable = ['nama', 'harga'];
+   
+    protected $fillable = [
+        'nama',
+        'harga',
+        'stok',       
+        'kategori',   
+    ];
 }

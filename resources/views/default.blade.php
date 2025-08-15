@@ -131,17 +131,22 @@
                
 
                 {{-- Services Menu --}}
-                {{-- CATATAN: Rute 'services.index' belum terdefinisi di routes/web.php. Ganti '#' dengan route() yang sesuai. --}}
-                <a href="#" class="flex items-center px-4 py-2 rounded
-                    {{ request()->routeIs('services.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                <a href="{{ route('admin.services.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('admin.services.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-mug-hot mr-3"></i> Services
                 </a>
-
+                
                 {{-- Kupon Menu --}}
-                {{-- CATATAN: Rute 'kupons.index' belum terdefinisi di routes/web.php. Ganti '#' dengan route() yang sesuai. --}}
-                <a href="#" class="flex items-center px-4 py-2 rounded
+                <a href="{{ route('admin.kupons.index') }}" class="flex items-center px-4 py-2 rounded
                     {{ request()->routeIs('kupons.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-tags mr-3"></i> Kupon
+                </a>
+
+                 
+                {{-- Paket Menu --}}
+                <a href="{{ route('admin.pakets.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('pakets.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-box-open mr-3"></i> Paket
                 </a>
 
                 {{-- Pengaturan Harga Menu --}}

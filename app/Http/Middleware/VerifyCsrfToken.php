@@ -14,6 +14,8 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         'login',  // Menambahkan rute login ke pengecualian jika diperlukan
         'logout',
+        'kasir.pesanSepuasnya',
+        'kasir.pesanDurasi',
         //
     ];
 }

@@ -6,7 +6,10 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\MejaController; // Panggil MejaController dari namespace root
-use App\Http\Controllers\HargaSettingController; // Panggil HargaSettingController
+use App\Http\Controllers\HargaSettingController;
+use App\Http\Controllers\ServiceController; 
+use App\Http\Controllers\KuponController; 
+use App\Http\Controllers\PaketController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [LoginController::class, 'index'])->name('landing');
@@ -30,6 +33,14 @@ Route::middleware(['auth'])->group(function () {
         // CRUD Meja untuk Admin (menggunakan MejaController di root)
         // Kita tidak memerlukan method create dan edit secara terpisah karena akan menggunakan modal
         Route::resource('admin/mejas', MejaController::class)->except(['create', 'show', 'edit'])->names('admin.mejas');
+
+        // CRUD service untuk Admin 
+        Route::resource('admin/services', ServiceController::class)->except(['create', 'show', 'edit'])->names('admin.services'); // Tambahkan ini
+
+        Route::resource('admin/kupons', KuponController::class)->except(['create', 'show', 'edit'])->names('admin.kupons');
+
+        // ini rute paket
+        Route::resource('admin/pakets', PaketController::class)->except(['create', 'show', 'edit'])->names('admin.pakets');
     });
 
     // BOS AREA
@@ -52,29 +63,32 @@ Route::middleware(['auth'])->group(function () {
     // KASIR AREA
     Route::middleware('role:kasir')->group(function () {
         Route::get('/kasir', [KasirController::class, 'dashboard'])->name('dashboard.kasir');
-        Route::post('/kasir/pesan', [KasirController::class, 'pesan'])->name('kasir.pesan');
+
+        Route::post('/kasir/pesan-durasi', [KasirController::class, 'pesanDurasi'])->name('kasir.pesanDurasi');
+
+        Route::post('/kasir/pesan-sepuasnya', [KasirController::class, 'pesanSepuasnya'])->name('kasir.pesanSepuasnya');
+
+        Route::post('/kasir/pesan-paket', [KasirController::class, 'pesanPaket'])->name('kasir.pesanPaket');
+        
         Route::get('/kasir/api/penyewaan-aktif', [KasirController::class, 'getPenyewaanAktifJson'])->name('kasir.api.penyewaanAktif');
 
-        // Rute untuk menandai waktu_selesai penyewaan (tidak mengubah status jadi 'selesai' lagi)
-        Route::post('/kasir/penyewaan/{penyewaan}/finish', [KasirController::class, 'finishPenyewaan'])->name('kasir.finishPenyewaan');
 
-        // Rute untuk memproses pembayaran
+        Route::post('/kasir/penyewaan/{penyewaan}/add-duration', [KasirController::class, 'addDuration'])->name('kasir.addDuration');
+
+
+        Route::post('/kasir/penyewaan/{penyewaan}/add-service', [KasirController::class, 'addService'])->name('kasir.addService');
+
+        Route::delete('/kasir/penyewaan/{penyewaan}/remove-service', [KasirController::class, 'removeService'])->name('kasir.removeService');
+        
         Route::post('/kasir/penyewaan/{penyewaan}/bayar', [KasirController::class, 'processPayment'])->name('kasir.processPayment');
 
-        // Note: Rute API belum ada
-        Route::get('/api/kupon/validate', function (Request $request) {
-            $kupon = App\Models\Kupon::where('kode', $request->code)
-                                    ->where('aktif', true)
-                                    ->where(function($query) {
-                                        $query->whereNull('kadaluarsa')
-                                              ->orWhere('kadaluarsa', '>=', now());
-                                    })
-                                    ->first();
-            if ($kupon) {
-                return response()->json(['valid' => true, 'diskon_persen' => $kupon->diskon_persen]);
-            }
-            return response()->json(['valid' => false, 'message' => 'Kupon tidak valid atau sudah kadaluarsa.'], 404);
-        })->name('api.kupon.validate');
+        // NEW: Rute API untuk validasi kupon
+        Route::get('/api/kupon/validate', [KuponController::class, 'validateKupon'])->name('api.kupon.validate');
+
+        // NEW: Rute API untuk mengambil daftar service
+        Route::get('/api/services', [ServiceController::class, 'getServicesJson'])->name('api.services');
+
+        Route::get('/api/pakets', [PaketController::class, 'getPaketsJson'])->name('api.pakets'); 
     });
 
 });

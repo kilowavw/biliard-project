@@ -40,6 +40,9 @@ class RedirectIfAuthenticated
                     case 'supervisor':
                         return redirect()->route('dashboard.supervisor');
                         break;
+                    case 'pemandu':
+                        return redirect()->route('dashboard.pemandu');
+                        break;
                     default:
                         // Jika ada peran lain yang tidak terduga, arahkan ke halaman utama
                         return redirect(RouteServiceProvider::HOME);
