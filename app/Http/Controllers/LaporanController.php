@@ -102,4 +102,48 @@ class LaporanController extends Controller
 
         return view('laporan.bulanan', compact('penyewaans', 'chartLabels', 'chartData', 'year', 'month', 'months', 'years'));
     }
+
+     public function tahunan(Request $request)
+    {
+        // Mendapatkan tahun dari request, default tahun sekarang
+        $year = $request->input('year', date('Y'));
+
+        // Ambil data agregasi total pendapatan per bulan untuk tahun tertentu
+        $monthlyRevenue = Penyewaan::select(
+                                DB::raw('MONTH(waktu_mulai) as month_num'),
+                                DB::raw('SUM(total_bayar) as total')
+                            )
+                            ->whereYear('waktu_mulai', $year)
+                            ->groupBy('month_num')
+                            ->orderBy('month_num', 'asc')
+                            ->get();
+
+        $chartLabels = []; // Untuk nama bulan
+        $chartData = [];   // Untuk total pendapatan per bulan
+        $tableData = [];   // Untuk data tabel ringkasan per bulan
+
+        // Inisialisasi label dan data untuk semua 12 bulan
+        for ($i = 1; $i <= 12; $i++) {
+            $monthName = date('F', mktime(0, 0, 0, $i, 1)); // Mendapatkan nama bulan (e.g., January)
+            $chartLabels[] = $monthName;
+            $chartData[$i] = 0; // Default ke 0 jika tidak ada penjualan di bulan tersebut
+            $tableData[$i] = [
+                'month_name' => $monthName,
+                'total_revenue' => 0
+            ];
+        }
+
+        foreach ($monthlyRevenue as $data) {
+            $chartData[$data->month_num] = $data->total;
+            $tableData[$data->month_num]['total_revenue'] = $data->total;
+        }
+
+        $chartData = array_values($chartData); // Reset keys untuk array JavaScript
+        $tableData = array_values($tableData); // Reset keys untuk array tabel
+
+        // Untuk dropdown filter tahun
+        $years = range(date('Y') - 5, date('Y') + 1); // Contoh rentang tahun
+
+        return view('laporan.tahunan', compact('tableData', 'chartLabels', 'chartData', 'year', 'years'));
+    }
 }

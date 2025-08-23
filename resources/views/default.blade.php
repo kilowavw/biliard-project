@@ -30,6 +30,8 @@
     <!-- DataTables CDN (Wajib setelah jQuery dan Bootstrap JS) -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css">
        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+       <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.4.1/datepicker.min.js"></script>
+
 
 
     <!-- Tailwind CSS (CDN) -->
