@@ -27,11 +27,11 @@ Route::middleware(['auth'])->group(function () {
     // ADMIN AREA
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboardadmin', [AdminController::class, 'dashboard'])->name('dashboard.admin');
+
         Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
         Route::post('/admin/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
         Route::put('/admin/users/{id}', [AdminController::class, 'updateUser'])->name('admin.users.update');
         Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
-
         // CRUD Meja untuk Admin (menggunakan MejaController di root)
         // Kita tidak memerlukan method create dan edit secara terpisah karena akan menggunakan modal
         Route::resource('admin/mejas', MejaController::class)->except(['create', 'show', 'edit'])->names('admin.mejas');
@@ -43,9 +43,6 @@ Route::middleware(['auth'])->group(function () {
 
         // ini rute paket
         Route::resource('admin/pakets', PaketController::class)->except(['create', 'show', 'edit'])->names('admin.pakets');
-
-         Route::get('/admin/reports/daily', [LaporanController::class, 'dailyReport'])->name('admin.reports.daily');
-    Route::get('/admin/reports/monthly', [LaporanController::class, 'monthlyReport'])->name('admin.reports.monthly');
 
     });
 
@@ -78,7 +75,6 @@ Route::middleware(['auth'])->group(function () {
         
         Route::get('/kasir/api/penyewaan-aktif', [KasirController::class, 'getPenyewaanAktifJson'])->name('kasir.api.penyewaanAktif');
 
-
         Route::post('/kasir/penyewaan/{penyewaan}/add-duration', [KasirController::class, 'addDuration'])->name('kasir.addDuration');
 
 
@@ -90,8 +86,6 @@ Route::middleware(['auth'])->group(function () {
 
         // NEW: Rute API untuk validasi kupon
         Route::get('/api/kupon/validate', [KuponController::class, 'validateKupon'])->name('api.kupon.validate');
-
-        // NEW: Rute API untuk mengambil daftar servic
     });
 
     // Pemandu AREA (Mirip Kasir tapi tanpa pembayaran, hanya pesan dan tambah service)
@@ -113,5 +107,7 @@ Route::middleware('role:pemandu')->group(function () {
   // Pemandu juga butuh API untuk daftar service dan paket
     Route::get('/api/services', [ServiceController::class, 'getServicesJson'])->name('api.services'); // Reuse existing API
     Route::get('/api/pakets', [PaketController::class, 'getPaketsJson'])->name('api.pakets');     // Reuse existing API
-
+    
+Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('laporan.harian');
+Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
 });

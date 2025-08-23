@@ -4,131 +4,102 @@ namespace App\Http\Controllers;
 
 use App\Models\Penyewaan;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use App\Models\Service; // Pastikan Service model di-import
 
 class LaporanController extends Controller
 {
-    public function dailyReport(Request $request)
+    /**
+     * Menampilkan laporan harian data penyewaan.
+     * Termasuk data tabel dan grafik total pendapatan per jam.
+     */
+    public function harian(Request $request)
     {
-        $date = $request->input('date', Carbon::today()->toDateString());
-        $startDate = Carbon::parse($date)->startOfDay();
-        $endDate = Carbon::parse($date)->endOfDay();
+        // Mendapatkan tanggal dari request, default hari ini
+        $date = $request->input('date', date('Y-m-d')); // Y-m-d format
 
-        $penyewaans = Penyewaan::with(['meja', 'kasir', 'paket'])
-            ->whereBetween('waktu_mulai', [$startDate, $endDate])
-            ->where('status', 'dibayar')
-            ->orderBy('waktu_mulai', 'asc')
-            ->get();
+        // Ambil data penyewaan untuk tanggal tertentu
+        $penyewaans = Penyewaan::whereDate('waktu_mulai', $date)
+                                ->orderBy('waktu_mulai', 'asc')
+                                ->get();
 
-        // Data untuk Chart
-        $totalPendapatan = $penyewaans->sum('total_bayar');
+        // Agregasi data untuk grafik (total pendapatan per jam)
+        $dailyRevenue = Penyewaan::select(
+                                DB::raw('HOUR(waktu_mulai) as hour'),
+                                DB::raw('SUM(total_bayar) as total')
+                            )
+                            ->whereDate('waktu_mulai', $date)
+                            ->groupBy('hour')
+                            ->orderBy('hour', 'asc')
+                            ->get();
 
-        $pendapatanPerJam = Penyewaan::select(
-                DB::raw("DATE_FORMAT(waktu_mulai, '%H:00') as hour"),
-                DB::raw("SUM(total_bayar) as total")
-            )
-            ->whereBetween('waktu_mulai', [$startDate, $endDate])
-            ->where('status', 'dibayar')
-            ->groupBy('hour')
-            ->orderBy('hour', 'asc')
-            ->get();
+        $chartLabels = [];
+        $chartData = [];
 
-        // Hitung pendapatan per kategori service secara manual dari service_detail
-        $serviceCategoriesData = [];
-        foreach ($penyewaans as $penyewaan) {
-            // Pastikan service_detail adalah array dan tidak kosong sebelum diulang
-            if (is_array($penyewaan->service_detail) && !empty($penyewaan->service_detail)) {
-                foreach ($penyewaan->service_detail as $serviceItem) {
-                    if (isset($serviceItem['id']) && isset($serviceItem['subtotal'])) {
-                        $service = Service::find($serviceItem['id']); // Menggunakan alias Service
-                        $category = $service ? $service->kategori : 'Lain-lain';
-
-                        if (!isset($serviceCategoriesData[$category])) {
-                            $serviceCategoriesData[$category] = 0;
-                        }
-                        $serviceCategoriesData[$category] += $serviceItem['subtotal'];
-                    }
-                }
-            }
+        // Inisialisasi label dan data untuk semua jam dalam sehari (0-23)
+        for ($i = 0; $i < 24; $i++) {
+            $chartLabels[] = sprintf('%02d:00', $i); // Format jam: 00:00, 01:00, dst.
+            $chartData[$i] = 0; // Default ke 0 jika tidak ada penjualan di jam tersebut
         }
 
-        // Total penyewaan per jenis (durasi tetap, sepuasnya, paket)
-        $penyewaanJenis = $penyewaans->groupBy(function($item) {
-            if ($item->paket_id) {
-                return 'paket';
-            } elseif ($item->durasi_jam > 0 && !is_null($item->waktu_selesai)) {
-                return 'durasi_tetap';
-            } else {
-                return 'sepuasnya';
-            }
-        })->map->count();
+        foreach ($dailyRevenue as $data) {
+            $chartData[$data->hour] = $data->total;
+        }
 
+        $chartData = array_values($chartData); // Reset keys untuk array JavaScript
 
-        return view('admin.reports.daily', compact(
-            'penyewaans', 'date', 'totalPendapatan',
-            'pendapatanPerJam', 'serviceCategoriesData', 'penyewaanJenis'
-        ));
+        return view('laporan.harian', compact('penyewaans', 'chartLabels', 'chartData', 'date'));
     }
 
-    public function monthlyReport(Request $request)
+    /**
+     * Menampilkan laporan bulanan data penyewaan.
+     * Termasuk data tabel dan grafik total pendapatan per hari.
+     */
+    public function bulanan(Request $request)
     {
-        $month = $request->input('month', Carbon::today()->format('Y-m'));
-        $startDate = Carbon::parse($month)->startOfMonth();
-        $endDate = Carbon::parse($month)->endOfMonth();
+        // Mendapatkan tahun dan bulan dari request, default bulan/tahun sekarang
+        $year = $request->input('year', date('Y'));
+        $month = $request->input('month', date('n')); // 'n' untuk bulan tanpa leading zero (1-12)
 
-        $penyewaans = Penyewaan::with(['meja', 'kasir', 'paket'])
-            ->whereBetween('waktu_mulai', [$startDate, $endDate])
-            ->where('status', 'dibayar')
-            ->orderBy('waktu_mulai', 'asc')
-            ->get();
+        // Ambil data penyewaan untuk bulan dan tahun tertentu
+        $penyewaans = Penyewaan::whereMonth('waktu_mulai', $month)
+                                ->whereYear('waktu_mulai', $year)
+                                ->orderBy('waktu_mulai', 'asc')
+                                ->get();
 
-        $totalPendapatan = $penyewaans->sum('total_bayar');
+        // Agregasi data untuk grafik (total pendapatan per hari)
+        $monthlyRevenue = Penyewaan::select(
+                                DB::raw('DAY(waktu_mulai) as day'),
+                                DB::raw('SUM(total_bayar) as total')
+                            )
+                            ->whereMonth('waktu_mulai', $month)
+                            ->whereYear('waktu_mulai', $year)
+                            ->groupBy('day')
+                            ->orderBy('day', 'asc')
+                            ->get();
 
-        // Pendapatan harian untuk chart bulanan
-        $pendapatanHarian = Penyewaan::select(
-                DB::raw("DATE_FORMAT(waktu_mulai, '%Y-%m-%d') as day"),
-                DB::raw("SUM(total_bayar) as total")
-            )
-            ->whereBetween('waktu_mulai', [$startDate, $endDate])
-            ->where('status', 'dibayar')
-            ->groupBy('day')
-            ->orderBy('day', 'asc')
-            ->get();
+        $chartLabels = [];
+        $chartData = [];
 
-        // Menghitung pendapatan per kategori service secara manual
-        $serviceCategoriesData = [];
-        foreach ($penyewaans as $penyewaan) {
-            // Pastikan service_detail adalah array dan tidak kosong sebelum diulang
-            if (is_array($penyewaan->service_detail) && !empty($penyewaan->service_detail)) {
-                foreach ($penyewaan->service_detail as $serviceItem) {
-                    if (isset($serviceItem['id']) && isset($serviceItem['subtotal'])) {
-                        $service = Service::find($serviceItem['id']); // Menggunakan alias Service
-                        $category = $service ? $service->kategori : 'Lain-lain';
-
-                        if (!isset($serviceCategoriesData[$category])) {
-                            $serviceCategoriesData[$category] = 0;
-                        }
-                        $serviceCategoriesData[$category] += $serviceItem['subtotal'];
-                    }
-                }
-            }
+        // Inisialisasi label dan data untuk semua hari dalam bulan
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        for ($i = 1; $i <= $daysInMonth; $i++) {
+            $chartLabels[] = $i; // Label hari: 1, 2, 3, dst.
+            $chartData[$i] = 0; // Default ke 0 jika tidak ada penjualan di hari tersebut
         }
 
-        $penyewaanJenis = $penyewaans->groupBy(function($item) {
-            if ($item->paket_id) {
-                return 'paket';
-            } elseif ($item->durasi_jam > 0 && !is_null($item->waktu_selesai)) {
-                return 'durasi_tetap';
-            } else {
-                return 'sepuasnya';
-            }
-        })->map->count();
+        foreach ($monthlyRevenue as $data) {
+            $chartData[$data->day] = $data->total;
+        }
 
-        return view('admin.reports.monthly', compact(
-            'penyewaans', 'month', 'totalPendapatan',
-            'pendapatanHarian', 'serviceCategoriesData', 'penyewaanJenis'
-        ));
+        $chartData = array_values($chartData); // Reset keys untuk array JavaScript
+
+        // Untuk dropdown filter bulan/tahun
+        $months = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $months[$i] = date('F', mktime(0, 0, 0, $i, 10)); // Mendapatkan nama bulan
+        }
+        $years = range(date('Y') - 5, date('Y') + 1); // Contoh rentang tahun
+
+        return view('laporan.bulanan', compact('penyewaans', 'chartLabels', 'chartData', 'year', 'month', 'months', 'years'));
     }
 }

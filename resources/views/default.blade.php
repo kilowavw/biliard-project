@@ -29,8 +29,8 @@
 
     <!-- DataTables CDN (Wajib setelah jQuery dan Bootstrap JS) -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css">
-    <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
+       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -160,8 +160,8 @@
                 
                 {{-- Rekap Transaksi Menu --}}
                 {{-- CATATAN: Rute 'transaksi.rekap' belum terdefinisi di routes/web.php. Ganti '#' dengan route() yang sesuai. --}}
-                <a href="{{ route('admin.reports.monthly') }}" class="flex items-center px-4 py-2 rounded
-                    {{ request()->routeIs('admin.reports.monthly') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                <a href="{{ route('laporan.harian') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('laporan.harian') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-receipt mr-3"></i> Rekap Transaksi
                 </a>
             </nav>

@@ -25,6 +25,7 @@ class Penyewaan extends Model
         'waktu_mulai' => 'datetime',
         'waktu_selesai' => 'datetime',
         'service_detail' => 'array',
+         'is_qris' => 'boolean',
     ];
 
     public function meja()

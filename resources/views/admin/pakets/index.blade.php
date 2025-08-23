@@ -1,5 +1,7 @@
 @extends('default')
 
+@section('title', 'Daftar Paket')
+
 @section('content')
 <div class="container mx-auto p-4 md:p-6 bg-[#121212] text-white">
     <h1 class="text-3xl font-bold mb-6">Manajemen Paket</h1>
