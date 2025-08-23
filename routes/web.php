@@ -10,6 +10,8 @@ use App\Http\Controllers\HargaSettingController;
 use App\Http\Controllers\ServiceController; 
 use App\Http\Controllers\KuponController; 
 use App\Http\Controllers\PaketController;
+use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\PemanduController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [LoginController::class, 'index'])->name('landing');
@@ -41,6 +43,10 @@ Route::middleware(['auth'])->group(function () {
 
         // ini rute paket
         Route::resource('admin/pakets', PaketController::class)->except(['create', 'show', 'edit'])->names('admin.pakets');
+
+         Route::get('/admin/reports/daily', [LaporanController::class, 'dailyReport'])->name('admin.reports.daily');
+    Route::get('/admin/reports/monthly', [LaporanController::class, 'monthlyReport'])->name('admin.reports.monthly');
+
     });
 
     // BOS AREA
@@ -85,10 +91,27 @@ Route::middleware(['auth'])->group(function () {
         // NEW: Rute API untuk validasi kupon
         Route::get('/api/kupon/validate', [KuponController::class, 'validateKupon'])->name('api.kupon.validate');
 
-        // NEW: Rute API untuk mengambil daftar service
-        Route::get('/api/services', [ServiceController::class, 'getServicesJson'])->name('api.services');
-
-        Route::get('/api/pakets', [PaketController::class, 'getPaketsJson'])->name('api.pakets'); 
+        // NEW: Rute API untuk mengambil daftar servic
     });
+
+    // Pemandu AREA (Mirip Kasir tapi tanpa pembayaran, hanya pesan dan tambah service)
+   // Pemandu AREA (Semua fungsionalitas Kasir kecuali pembayaran)
+Route::middleware('role:pemandu')->group(function () {
+    Route::get('/pemandu', [PemanduController::class, 'dashboard'])->name('dashboard.pemandu');
+
+    Route::post('/pemandu/pesan-durasi', [PemanduController::class, 'pesanDurasi'])->name('pemandu.pesanDurasi');
+    Route::post('/pemandu/pesan-sepuasnya', [PemanduController::class, 'pesanSepuasnya'])->name('pemandu.pesanSepuasnya');
+    Route::post('/pemandu/pesan-paket', [PemanduController::class, 'pesanPaket'])->name('pemandu.pesanPaket');
+
+    Route::get('/pemandu/api/penyewaan-aktif', [PemanduController::class, 'getPenyewaanAktifJson'])->name('pemandu.api.penyewaanAktif');
+
+    Route::post('/pemandu/penyewaan/{penyewaan}/add-duration', [PemanduController::class, 'addDuration'])->name('pemandu.addDuration');
+    Route::post('/pemandu/penyewaan/{penyewaan}/add-service', [PemanduController::class, 'addService'])->name('pemandu.addService');
+    Route::delete('/pemandu/penyewaan/{penyewaan}/remove-service', [PemanduController::class, 'removeService'])->name('pemandu.removeService');
+  
+});
+  // Pemandu juga butuh API untuk daftar service dan paket
+    Route::get('/api/services', [ServiceController::class, 'getServicesJson'])->name('api.services'); // Reuse existing API
+    Route::get('/api/pakets', [PaketController::class, 'getPaketsJson'])->name('api.pakets');     // Reuse existing API
 
 });

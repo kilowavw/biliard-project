@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') - Billiard</title>
 
     <!-- Font Inter -->
@@ -159,8 +160,8 @@
                 
                 {{-- Rekap Transaksi Menu --}}
                 {{-- CATATAN: Rute 'transaksi.rekap' belum terdefinisi di routes/web.php. Ganti '#' dengan route() yang sesuai. --}}
-                <a href="#" class="flex items-center px-4 py-2 rounded
-                    {{ request()->routeIs('transaksi.rekap') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                <a href="{{ route('admin.reports.monthly') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('admin.reports.monthly') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-receipt mr-3"></i> Rekap Transaksi
                 </a>
             </nav>

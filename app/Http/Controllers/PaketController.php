@@ -3,23 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Paket;
-use App\Models\Service; // Masih diperlukan untuk menampilkan daftar service di form
+use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Log;
 
 class PaketController extends Controller
 {
     public function index()
     {
         $pakets = Paket::orderBy('created_at', 'desc')->paginate(10);
-        // Kita tidak lagi butuh $services di sini untuk form paket,
-        // karena service akan dimasukkan manual dalam JSON 'isi_paket'.
-        // Namun, jika Anda punya halaman manajemen service yang terpisah, ini bisa dihapus.
-        // Untuk saat ini, kita biarkan saja agar modal tambah/edit paket bisa memuat daftar service untuk contoh JSON.
         $services = Service::select('id', 'nama', 'harga', 'stok')->orderBy('nama')->get();
-
         return view('admin.pakets.index', compact('pakets', 'services'));
     }
 
@@ -28,18 +22,47 @@ class PaketController extends Controller
         try {
             $request->validate([
                 'nama_paket' => 'required|string|max:255|unique:pakets,nama_paket',
-                'isi_paket_json' => 'required|string|json', // Validasi bahwa ini adalah string JSON yang valid
+                'harga_paket' => 'required|numeric|min:0',
+                'durasi_jam' => 'required|numeric|min:0',
+                'deskripsi_tambahan' => 'nullable|string',
                 'aktif' => 'boolean',
+                'services' => 'nullable|array',
+                'services.*.id' => 'required_with:services|exists:services,id',
+                'services.*.jumlah' => 'required_with:services|integer|min:0',
             ], [
                 'nama_paket.required' => 'Nama paket wajib diisi.',
                 'nama_paket.unique' => 'Nama paket ini sudah ada.',
-                'isi_paket_json.required' => 'Isi paket (JSON) wajib diisi.',
-                'isi_paket_json.json' => 'Isi paket harus berupa format JSON yang valid.',
+                'harga_paket.required' => 'Harga paket wajib diisi.',
+                'durasi_jam.required' => 'Durasi jam wajib diisi.',
             ]);
+
+            $serviceDetails = [];
+            if ($request->has('services')) {
+                foreach ($request->services as $serviceItem) {
+                    if (isset($serviceItem['jumlah']) && $serviceItem['jumlah'] > 0) {
+                        $service = Service::find($serviceItem['id']);
+                        if ($service) {
+                            $serviceDetails[] = [
+                                'id' => (int)$service->id,
+                                'nama' => $service->nama,
+                                'jumlah' => (int)$serviceItem['jumlah'],
+                                'subtotal' => $service->harga * (int)$serviceItem['jumlah'],
+                            ];
+                        }
+                    }
+                }
+            }
+
+            $isiPaket = [
+                'harga_paket' => (float)$request->harga_paket,
+                'durasi_jam' => (float)$request->durasi_jam,
+                'deskripsi_tambahan' => $request->deskripsi_tambahan,
+                'services' => $serviceDetails,
+            ];
 
             Paket::create([
                 'nama_paket' => $request->nama_paket,
-                'isi_paket' => $request->isi_paket_json, // Simpan langsung string JSON dari form
+                'isi_paket' => $isiPaket,
                 'aktif' => $request->boolean('aktif'),
             ]);
 
@@ -47,7 +70,6 @@ class PaketController extends Controller
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors(), 'storePaket')->withInput();
         } catch (\Exception $e) {
-            Log::error('Error storing paket: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Gagal menambahkan paket. Silakan coba lagi.');
         }
     }
@@ -57,30 +79,58 @@ class PaketController extends Controller
         try {
             $request->validate([
                 'nama_paket' => ['required', 'string', 'max:255', Rule::unique('pakets')->ignore($paket->id)],
-                'isi_paket_json' => 'required|string|json', // Validasi bahwa ini adalah string JSON yang valid
+                'harga_paket' => 'required|numeric|min:0',
+                'durasi_jam' => 'required|numeric|min:0',
+                'deskripsi_tambahan' => 'nullable|string',
                 'aktif' => 'boolean',
+                'services' => 'nullable|array',
+                'services.*.id' => 'required_with:services|exists:services,id',
+                'services.*.jumlah' => 'required_with:services|integer|min:0',
             ], [
                 'nama_paket.required' => 'Nama paket wajib diisi.',
                 'nama_paket.unique' => 'Nama paket ini sudah ada.',
-                'isi_paket_json.required' => 'Isi paket (JSON) wajib diisi.',
-                'isi_paket_json.json' => 'Isi paket harus berupa format JSON yang valid.',
+                'harga_paket.required' => 'Harga paket wajib diisi.',
+                'durasi_jam.required' => 'Durasi jam wajib diisi.',
             ]);
+
+            $serviceDetails = [];
+            if ($request->has('services')) {
+                foreach ($request->services as $serviceItem) {
+                    if (isset($serviceItem['jumlah']) && $serviceItem['jumlah'] > 0) {
+                        $service = Service::find($serviceItem['id']);
+                        if ($service) {
+                            $serviceDetails[] = [
+                                'id' => (int)$service->id,
+                                'nama' => $service->nama,
+                                'jumlah' => (int)$serviceItem['jumlah'],
+                                'subtotal' => $service->harga * (int)$serviceItem['jumlah'],
+                            ];
+                        }
+                    }
+                }
+            }
+
+            $isiPaket = [
+                'harga_paket' => (float)$request->harga_paket,
+                'durasi_jam' => (float)$request->durasi_jam,
+                'deskripsi_tambahan' => $request->deskripsi_tambahan,
+                'services' => $serviceDetails,
+            ];
 
             $paket->update([
                 'nama_paket' => $request->nama_paket,
-                'isi_paket' => $request->isi_paket_json, // Simpan langsung string JSON dari form
+                'isi_paket' => $isiPaket,
                 'aktif' => $request->boolean('aktif'),
             ]);
 
-            return redirect()->route('admin.pakets.index')->with('success', 'Paket berhasil diperbarui!');
+            // NEW: Return JSON response for AJAX
+            return response()->json(['message' => 'Paket berhasil diperbarui!', 'paket' => $paket]);
         } catch (ValidationException $e) {
-            return back()
-                ->withErrors($e->errors(), 'updatePaket')
-                ->withInput()
-                ->with('paket_id_on_error', $paket->id);
+            // NEW: Return JSON error response for AJAX
+            return response()->json(['errors' => $e->errors(), 'message' => 'Validasi gagal!'], 422);
         } catch (\Exception $e) {
-            Log::error('Error updating paket: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Gagal memperbarui paket. Silakan coba lagi.');
+            // NEW: Return JSON error response for AJAX
+            return response()->json(['message' => 'Gagal memperbarui paket. Silakan coba lagi.'], 500);
         }
     }
 
@@ -90,18 +140,14 @@ class PaketController extends Controller
             $paket->delete();
             return redirect()->route('admin.pakets.index')->with('success', 'Paket berhasil dihapus!');
         } catch (\Exception $e) {
-            Log::error('Error deleting paket: ' . $e->getMessage());
             return back()->with('error', 'Gagal menghapus paket. Silakan coba lagi.');
         }
     }
 
-    /**
-     * Get all active pakets for API consumption by kasir dashboard.
-     */
     public function getPaketsJson()
     {
         $pakets = Paket::where('aktif', true)
-                        ->select('id', 'nama_paket', 'isi_paket') // Hanya kirim yang relevan
+                        ->select('id', 'nama_paket', 'isi_paket')
                         ->orderBy('nama_paket')
                         ->get();
         return response()->json($pakets);

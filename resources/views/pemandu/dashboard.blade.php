@@ -1,14 +1,18 @@
 @extends('default')
 
-@section('title', 'Dashboard Kasir')
+@section('title', 'Dashboard Pemandu')
 
 @section('content')
 
+{{-- Pastikan Toastr dan SweetAlert2 di-include di default.blade.php atau di sini --}}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+{{-- Jika Anda menggunakan SweetAlert2 untuk error message, pastikan juga sudah di-include --}}
+{{-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> --}}
+
 
 <div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4 text-black">Dashboard Kasir</h1>
+    <h1 class="text-2xl font-bold mb-4 text-black">Dashboard Pemandu</h1>
 
     <div id="meja-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-black">
         @foreach ($mejas as $meja)
@@ -17,7 +21,7 @@
             <p id="status-meja-{{ $meja->id }}">Status: {{ $meja->status }}</p>
 
             @if ($meja->status === 'kosong')
-            <button id="btn-pesan-{{ $meja->id }}" onclick="openModal({{ $meja->id }})" class="mt-2 btn btn-primary">Pesan</button>
+            <button id="btn-pesan-{{ $meja->id }}" data-meja-id="{{ $meja->id }}" class="mt-2 btn btn-primary btn-pesan-meja">Pesan</button>
             @endif
             <div id="penyewaan-{{ $meja->id }}"></div>
         </div>
@@ -60,7 +64,7 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" onclick="closeModal()" class="btn btn-secondary">Batal</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Batal</button>
                 <button type="submit" class="btn btn-primary">Mulai</button>
             </div>
         </form>
@@ -81,7 +85,7 @@
                 <input type="number" name="additional_durasi_jam" id="additional_durasi_jam" required min="0.01" step="0.01" class="form-input">
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="closeAddDurationModal()" class="btn btn-secondary">Batal</button>
+                <button type="button" class="btn btn-secondary" onclick="closeAddDurationModal()">Batal</button>
                 <button type="submit" class="btn btn-primary">Tambah Durasi</button>
             </div>
         </form>
@@ -106,48 +110,15 @@
             <p class="text-lg font-bold">Total Tambahan Service: <strong id="current_service_add_total" class="text-blue-600">Rp 0</strong></p>
 
             <div class="modal-footer">
-                <button type="button" onclick="closeAddServiceModal()" class="btn btn-secondary">Batal</button>
+                <button type="button" class="btn btn-secondary" onclick="closeAddServiceModal()">Batal</button>
                 <button type="submit" class="btn btn-primary">Tambah Service</button>
             </div>
         </form>
     </div>
 </div>
 
+{{-- MODAL PEMBAYARAN DIHAPUS DARI PANDU --}}
 
-{{-- Modal Pembayaran --}}
-<div id="paymentModal" style="display:none" class="modal-overlay">
-    <div class="modal-content">
-        <h2 class="text-xl font-bold mb-4">Detail Pembayaran</h2>
-        <form id="formPembayaran">
-            @csrf
-            <input type="hidden" name="penyewaan_id" id="payment_penyewaan_id">
-            <p>Meja: <strong id="payment_meja_nama"></strong></p>
-            <p>Penyewa: <strong id="payment_nama_penyewa"></strong></p>
-            <p>Durasi Booking: <strong id="payment_durasi"></strong></p>
-            <p id="payment_mode_sepuasnya_info" style="display: none;" class="text-sm text-gray-500 italic">(Mode Main Sepuasnya)</p>
-            <p>Waktu Mulai: <strong id="payment_waktu_mulai"></strong></p>
-            <p>Waktu Selesai (Terjadwal): <strong id="payment_waktu_selesai_terjadwal"></strong></p>
-            <p>Waktu Selesai (Aktual): <strong id="payment_waktu_selesai_aktual"></strong></p>
-            <p>Harga Per Jam: <strong id="payment_harga_per_jam"></strong></p>
-            <p>Subtotal Main: <strong id="payment_subtotal_main"></strong></p>
-            <p>Total Service: <strong id="payment_total_service"></strong></p>
-            <ul id="payment_service_detail" class="list-disc list-inside text-sm text-gray-600 mb-2"></ul>
-
-            <div class="mb-3 mt-4">
-                <label for="kode_kupon" class="form-label">Kode Kupon (Opsional)</label>
-                <input type="text" name="kode_kupon" id="kode_kupon" class="form-input">
-                <small class="text-gray-500">Biarkan kosong jika tidak ada kupon.</small>
-            </div>
-            <p class="text-lg font-bold">Diskon: <strong id="payment_diskon" class="text-red-500"></strong></p>
-            <p class="text-xl font-bold">Total Pembayaran: <strong id="payment_total_final" class="text-green-600"></strong></p>
-            <div class="modal-footer">
-                <button type="button" onclick="closePaymentModal()" class="btn btn-secondary">Batal</button>
-                <button type="submit" class="btn btn-primary">Bayar Sekarang</button>
-                 <button type="button" id="btn-pay-qris" onclick="handleQrisPayment()" class="btn bg-blue-500 hover:bg-blue-600 text-white">Bayar dengan QRIS</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <style>
     /* Basic Modal Styles */
@@ -172,24 +143,17 @@
 
 @if($errors->any())
 <script>
-    Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
-        text: "{{ $errors->first() }}",
-        confirmButtonText: 'OK'
-    });
-</script>
-@endif
-
-{{-- SWEETALERT FOR SUCCESS MESSAGES --}}
-@if(session('success'))
-<script>
-    Swal.fire({
-        icon: 'success',
-        title: 'Berhasil!',
-        text: "{{ session('success') }}",
-        confirmButtonText: 'OK'
-    });
+    // Pastikan Swal.fire terdefinisi, mungkin perlu include SweetAlert2 di default.blade.php
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: "{{ $errors->first() }}",
+            confirmButtonText: 'OK'
+        });
+    } else {
+        toastr.error("{{ $errors->first() }}", 'Error');
+    }
 </script>
 @endif
 
@@ -223,8 +187,8 @@
     const fmtRp = (amt) => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(amt);
     const debounce = (func, delay) => { let timeout; return function(...args) { const context=this; clearTimeout(timeout); timeout=setTimeout(()=>func.apply(context,args),delay); }; };
 
-    // --- Modal Control Functions ---
-    const openModal = async (mejaId) => { // Made async to load pakets
+    // --- Modal Control Functions (Didefinisikan secara global) ---
+    window.openModal = async (mejaId) => { // Made async to load pakets
         getEl('modal_meja_id').value = mejaId;
         getEl('formPesan').reset();
         getEl('paket_id_select').value = ''; // Reset paket selection
@@ -235,31 +199,27 @@
         getEl('is_sepuasnya').checked = false;
         getEl('durasi_jam_wrapper').style.display = 'block';
         getEl('durasi_jam').required = true;
-        
-        getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}'; // Set default action
+
+        getEl('formPesan').action = '{{ route('pemandu.pesanDurasi') }}'; // Set default action for Pemandu
 
         await fetchAndPopulatePakets(); // Fetch and populate pakets for the dropdown
         toggleModal('pesanModal', true);
     };
-    const closeModal = () => toggleModal('pesanModal', false);
-    const openAddDurationModal = (penyewaanId) => {
-        const p=currentActiveRentals[penyewaanId]; if (!p || p.is_sepuasnya) { alert('Tidak bisa menambah durasi untuk penyewaan ini.'); return; }
+    window.closeModal = () => toggleModal('pesanModal', false);
+
+    window.openAddDurationModal = (penyewaanId) => {
+        const p=currentActiveRentals[penyewaanId]; if (!p || p.is_sepuasnya) { toastr.error('Tidak bisa menambah durasi untuk penyewaan ini.'); return; }
         getEl('add_duration_penyewaan_id').value = penyewaanId; getEl('add_duration_meja_nama').innerText = p.meja_nama; getEl('add_duration_nama_penyewa').innerText = p.nama_penyewa; getEl('add_duration_current_durasi').innerText = fmtDur(p.durasi_jam); getEl('formAddDuration').reset(); toggleModal('addDurationModal', true);
     };
-    const closeAddDurationModal = () => toggleModal('addDurationModal', false);
-    const openAddServiceModal = async (penyewaanId) => {
-        const p=currentActiveRentals[penyewaanId]; if (!p) { alert('Penyewaan tidak ditemukan.'); return; }
+    window.closeAddDurationModal = () => toggleModal('addDurationModal', false);
+
+    window.openAddServiceModal = async (penyewaanId) => {
+        const p=currentActiveRentals[penyewaanId]; if (!p) { toastr.error('Penyewaan tidak ditemukan.'); return; }
         getEl('add_service_penyewaan_id').value = penyewaanId; getEl('add_service_meja_nama').innerText = p.meja_nama; getEl('add_service_nama_penyewa').innerText = p.nama_penyewa; getEl('add_service_current_total').innerText = fmtRp(p.total_service); getEl('current_service_add_total').innerText = fmtRp(0);
         await fetchAndRenderServicesForAdd();
         toggleModal('addServiceModal', true);
     };
-    const closeAddServiceModal = () => toggleModal('addServiceModal', false);
-    const openPaymentModal = (penyewaanId) => {
-        if (getEl('paymentModal').style.display === 'flex') return;
-        getEl('payment_penyewaan_id').value = penyewaanId; getEl('kode_kupon').value = '';
-        fetchPaymentDetails(penyewaanId); toggleModal('paymentModal', true);
-    };
-    const closePaymentModal = () => toggleModal('paymentModal', false);
+    window.closeAddServiceModal = () => toggleModal('addServiceModal', false);
 
     // --- Timer Logic ---
     const startCountdown = (el, waktuSelesaiStr, penyewaanData) => {
@@ -268,7 +228,7 @@
         const interval = setInterval(() => {
             const now = getCalibratedNow(); const dist = waktuSelesai.getTime() - now.getTime();
             if (dist <= 0) { clearInterval(interval); el.innerText = 'Waktu habis!'; el.classList.add('text-red-700','font-bold'); handleTimeUpUI(penyewaanData); }
-            else { const h=String(Math.floor((dist/(1000*60*60))%24)).padStart(2,'0'); const m=String(Math.floor((dist/(1000*60))%60)).padStart(2,'0'); const s=String(Math.floor((dist/1000)%60)).padStart(2,'0'); el.innerText=`${h}:${m}:${s}`; }
+            else { const h=String(Math.floor((dist/(1000*60*60)))).padStart(2,'0'); const m=String(Math.floor((dist/(1000*60))%60)).padStart(2,'0'); const s=String(Math.floor((dist/1000)%60)).padStart(2,'0'); el.innerText=`${h}:${m}:${s}`; }
         }, 1000); countdownIntervals[pId] = interval;
     };
 
@@ -277,7 +237,7 @@
         if (countdownIntervals[pId]) clearInterval(countdownIntervals[pId]);
         const interval = setInterval(() => {
             const now = getCalibratedNow(); const elapsed = now.getTime() - waktuMulai.getTime();
-            const h=String(Math.floor((elapsed/(1000*60*60))%24)).padStart(2,'0'); const m=String(Math.floor((elapsed/(1000*60))%60)).padStart(2,'0'); const s=String(Math.floor((elapsed/1000)%60)).padStart(2,'0'); el.innerText=`${h}:${m}:${s}`;
+            const h=String(Math.floor((elapsed/(1000*60*60)))).padStart(2,'0'); const m=String(Math.floor((elapsed/(1000*60))%60)).padStart(2,'0'); const s=String(Math.floor((elapsed/1000)%60)).padStart(2,'0'); el.innerText=`${h}:${m}:${s}`;
         }, 1000); countdownIntervals[pId] = interval;
     };
 
@@ -288,38 +248,36 @@
                 <a href="#" class="btn btn-xs bg-yellow-200 hover:bg-yellow-300 text-yellow-900 px-3 py-1 rounded" onclick="event.preventDefault(); openAddServiceModal(${penyewaanData.id});">
                     <i class="fa-solid fa-wine-bottle"></i> Tambah Service
                 </a>
-                <a href="#" class="btn btn-xs btn-success" onclick="event.preventDefault(); openPaymentModal(${penyewaanData.id});">
-                    <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
-                </a>
+                {{-- Tombol "Bayar Sekarang" dihapus untuk Pemandu --}}
             `;
         }
-        openPaymentModal(penyewaanData.id);
+        // openPaymentModal(penyewaanData.id); // Dihapus karena Pemandu tidak memproses pembayaran
     };
 
     // --- Service Dropdown & Removal Logic ---
-    const toggleServiceDropdown = (penyewaanId) => {
+    window.toggleServiceDropdown = (penyewaanId) => { // Didefinisikan secara global
         const serviceListEl = getEl(`service-list-${penyewaanId}`);
         const iconEl = getEl(`service-toggle-icon-${penyewaanId}`);
         if (serviceListEl.style.display === 'block') { serviceListEl.style.display = 'none'; iconEl.classList.replace('fa-chevron-up', 'fa-chevron-down'); }
         else { serviceListEl.style.display = 'block'; iconEl.classList.replace('fa-chevron-down', 'fa-chevron-up'); }
     };
 
-    const removeServiceFromPenyewaan = async (penyewaanId, serviceId, serviceName) => {
+    window.removeServiceFromPenyewaan = async (penyewaanId, serviceId, serviceName) => { // Didefinisikan secara global
         if (!confirm(`Yakin ingin menghapus "${serviceName}" dari penyewaan ini?`)) return;
         try {
-            const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${penyewaanId}/remove-service`, {
+            const res = await fetch(`{{ url('/pemandu/penyewaan/') }}/${penyewaanId}/remove-service`, {
                 method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ service_id: serviceId })
             });
             const data = await res.json();
-            if (res.ok) { alert(data.message); fetchAndRenderMejas(); }
-            else { alert('Gagal menghapus service: ' + (data.message || 'Terjadi kesalahan.')); }
-        } catch (error) { console.error('Error removing service:', error); alert('Terjadi kesalahan jaringan atau server saat menghapus service.'); }
+            if (res.ok) { toastr.success(data.message); fetchAndRenderMejas(); }
+            else { toastr.error('Gagal menghapus service: ' + (data.message || 'Terjadi kesalahan.')); }
+        } catch (error) { console.error('Error removing service:', error); toastr.error('Terjadi kesalahan jaringan atau server saat menghapus service.'); }
     };
 
     // --- Data Fetching & Rendering ---
     const fetchAndRenderMejas = async () => {
         try {
-            const res = await fetch('{{ route('kasir.api.penyewaanAktif') }}');
+            const res = await fetch('{{ route('pemandu.api.penyewaanAktif') }}'); // Rute API Pemandu
             const activeRentals = await res.json();
             currentActiveRentals = {}; activeRentals.forEach(p => currentActiveRentals[p.id] = p);
 
@@ -328,7 +286,7 @@
                 const penyewaanForThisMeja = activeRentals.find(p => parseInt(p.meja_id) === mejaId);
 
                 const statusMejaEl = card.querySelector(`#status-meja-${mejaId}`);
-                let pesanBtnEl = card.querySelector(`#btn-pesan-${mejaId}`);
+                let pesanBtnEl = card.querySelector(`.btn-pesan-meja[data-meja-id="${mejaId}"]`); // Perbaikan selektor
                 const penyewaanDivEl = card.querySelector(`#penyewaan-${mejaId}`);
 
                 if (penyewaanForThisMeja) {
@@ -343,29 +301,25 @@
                     if (isSepuasnya) timerDisplay = `⏳ <span id="running-timer-${penyewaanForThisMeja.id}">00:00:00</span> (Main Sepuasnya)`;
                     else if (isTimeUp) timerDisplay = `⏳ Waktu habis!`;
 
-                    let actionButtonsHtml = '';
-                    if (isSepuasnya || isTimeUp) {
-                        actionButtonsHtml = `
+                    let actionButtonsHtml = `
+                        <a href="#" class="btn btn-xs bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded" onclick="event.preventDefault(); openAddDurationModal(${penyewaanForThisMeja.id});">
+                            <i class="fa-solid fa-stopwatch"></i> Tambah Waktu
+                        </a>
+                        <a href="#" class="btn btn-xs bg-yellow-200 hover:bg-yellow-300 text-yellow-900 px-3 py-1 rounded" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
+                            <i class="fa-solid fa-wine-bottle"></i> Tambah Service
+                        </a>
+                        {{-- Tombol Bayar Sekarang dihapus untuk Pemandu --}}
+                    `;
+                    // Jika waktu habis, tidak perlu tombol tambah waktu
+                    if (isTimeUp && !isSepuasnya) { // Hanya jika durasi fixed dan sudah habis
+                         actionButtonsHtml = `
                             <a href="#" class="btn btn-xs bg-yellow-200 hover:bg-yellow-300 text-yellow-900 px-3 py-1 rounded" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
                                 <i class="fa-solid fa-wine-bottle"></i> Tambah Service
                             </a>
-                            <a href="#" class="btn btn-xs btn-success" onclick="event.preventDefault(); openPaymentModal(${penyewaanForThisMeja.id});">
-                                <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
-                            </a>
-                        `;
-                    } else {
-                        actionButtonsHtml = `
-                            <a href="#" class="btn btn-xs bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded" onclick="event.preventDefault(); openAddDurationModal(${penyewaanForThisMeja.id});">
-                                <i class="fa-solid fa-stopwatch"></i> Tambah Waktu
-                            </a>
-                            <a href="#" class="btn btn-xs bg-yellow-200 hover:bg-yellow-300 text-yellow-900 px-3 py-1 rounded" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
-                                <i class="fa-solid fa-wine-bottle"></i> Tambah Service
-                            </a>
-                            <a href="#" class="btn btn-xs btn-success" onclick="event.preventDefault(); openPaymentModal(${penyewaanForThisMeja.id});">
-                                <i class="fa-solid fa-cash-register"></i> Bayar
-                            </a>
+                            {{-- Tombol Bayar Sekarang dihapus untuk Pemandu --}}
                         `;
                     }
+
 
                     let serviceDetailHtml = '';
                     if (penyewaanForThisMeja.service_detail && penyewaanForThisMeja.service_detail.length > 0) {
@@ -428,9 +382,14 @@
                     if (statusMejaEl) statusMejaEl.innerText = 'Status: kosong';
                     if (penyewaanDivEl) penyewaanDivEl.innerHTML = '';
 
+                    // Jika tombol pesan tidak ada atau disembunyikan sebelumnya, buat ulang
                     if (!pesanBtnEl) {
-                        pesanBtnEl = document.createElement('button'); pesanBtnEl.id = `btn-pesan-${mejaId}`; pesanBtnEl.className = 'mt-2 btn btn-primary'; pesanBtnEl.innerText = 'Pesan';
-                        pesanBtnEl.onclick = () => openModal(mejaId); card.appendChild(pesanBtnEl);
+                        pesanBtnEl = document.createElement('button');
+                        pesanBtnEl.id = `btn-pesan-${mejaId}`;
+                        pesanBtnEl.className = 'mt-2 btn btn-primary btn-pesan-meja'; // Tambahkan class untuk event listener
+                        pesanBtnEl.innerText = 'Pesan';
+                        pesanBtnEl.setAttribute('data-meja-id', mejaId); // Tambahkan data-id
+                        card.appendChild(pesanBtnEl);
                     }
                     pesanBtnEl.style.display = 'block';
 
@@ -439,58 +398,23 @@
                     }
                 }
             });
+            // Attach event listeners for new "Pesan" buttons
+            document.querySelectorAll('.btn-pesan-meja').forEach(button => {
+                // Hapus listener lama jika ada untuk mencegah duplikasi
+                button.onclick = null;
+                button.addEventListener('click', () => {
+                    openModal(button.dataset.mejaId);
+                });
+            });
+
         } catch (error) { console.error('Error fetching and rendering mejas:', error); }
     };
 
-    const fetchPaymentDetails = async (penyewaanId) => {
-        const p=currentActiveRentals[penyewaanId]; if (!p) { alert('Detail penyewaan tidak ditemukan.'); closePaymentModal(); return; }
-
-        const hargaPerJam = parseFloat(p.harga_per_jam || 0); let durasiUntukPerhitungan = parseFloat(p.durasi_jam || 0);
-        const initialTotalService = parseFloat(p.total_service || 0); const serviceDetails = p.service_detail;
-
-        let waktuSelesaiAktual = getCalibratedNow();
-        if (p.is_sepuasnya) { durasiUntukPerhitungan = (waktuSelesaiAktual.getTime() - new Date(p.waktu_mulai).getTime()) / (1000 * 60 * 60); }
-
-        const updateTotalDisplay = (diskonPersen = 0) => {
-            const subtotalMain = durasiUntukPerhitungan * hargaPerJam;
-            const totalBeforeDiscount = subtotalMain + initialTotalService;
-            const currentDiskon = (totalBeforeDiscount * diskonPersen) / 100;
-            const finalTotal = totalBeforeDiscount - currentDiskon;
-
-            getEl('payment_subtotal_main').innerText = fmtRp(subtotalMain); getEl('payment_total_service').innerText = fmtRp(initialTotalService);
-            getEl('payment_diskon').innerText = fmtRp(currentDiskon); getEl('payment_total_final').innerText = fmtRp(finalTotal);
-        };
-
-        getEl('payment_meja_nama').innerText = p.meja_nama; getEl('payment_nama_penyewa').innerText = p.nama_penyewa;
-        getEl('payment_durasi').innerText = p.is_sepuasnya ? 'N/A (Main Sepuasnya)' : fmtDur(p.durasi_jam);
-        getEl('payment_mode_sepuasnya_info').style.display = p.is_sepuasnya ? 'block' : 'none';
-        getEl('payment_waktu_mulai').innerText = fmtFullDt(p.waktu_mulai);
-        getEl('payment_waktu_selesai_terjadwal').innerText = p.waktu_selesai ? fmtFullDt(p.waktu_selesai) : 'N/A';
-        getEl('payment_waktu_selesai_aktual').innerText = fmtFullDt(waktuSelesaiAktual);
-        getEl('payment_harga_per_jam').innerText = fmtRp(hargaPerJam);
-
-        const serviceDetailListEl = getEl('payment_service_detail'); serviceDetailListEl.innerHTML = '';
-        if (serviceDetails && serviceDetails.length > 0) {
-            serviceDetails.forEach(s => { const li = document.createElement('li'); li.innerText = `${s.nama} (${s.jumlah}x) - ${fmtRp(s.subtotal)}`; serviceDetailListEl.appendChild(li); });
-        } else { const li = document.createElement('li'); li.innerText = 'Tidak ada layanan tambahan.'; serviceDetailListEl.appendChild(li); }
-        updateTotalDisplay();
-
-        getEl('kode_kupon').oninput = debounce(async function() {
-            const kuponCode = this.value.trim(); let diskonPersen = 0;
-            if (kuponCode) {
-                try {
-                    const res = await fetch(`{{ route('api.kupon.validate') }}?code=${encodeURIComponent(kuponCode)}`);
-                    if (res.ok) { const data = await res.json(); diskonPersen = parseFloat(data.diskon_persen) || 0; alert(`Kupon "${kuponCode}" berhasil diterapkan! Diskon ${diskonPersen}%`); }
-                    else { const errData = await res.json(); alert('Kupon tidak valid: ' + (errData.message || 'Kode kupon tidak ditemukan atau kadaluarsa.')); }
-                } catch (e) { alert('Error saat memvalidasi kupon. Silakan cek koneksi atau rute API Kupon.'); console.error('Error validating kupon:', e); }
-            }
-            updateTotalDisplay(diskonPersen);
-        }, 500);
-    };
+    // fetchPaymentDetails dan semua terkait pembayaran DIHAPUS untuk Pemandu
 
     const fetchAndRenderServicesForAdd = async () => {
         try {
-            const res = await fetch('{{ route('api.services') }}');
+            const res = await fetch('{{ route('api.services') }}'); // Menggunakan API umum
             allAvailableServices = await res.json();
             const serviceListContainer = getEl('service_list_container'); serviceListContainer.innerHTML = '';
 
@@ -512,7 +436,7 @@
 
                         if (qty > maxStock) {
                             qtyInput.value = maxStock;
-                            alert(`Jumlah ${qtyInput.closest('div').querySelector('span').firstChild.textContent.trim()} melebihi stok yang tersedia (${maxStock}).`);
+                            toastr.warning(`Jumlah ${qtyInput.closest('div').querySelector('span').firstChild.textContent.trim()} melebihi stok yang tersedia (${maxStock}).`);
                             total += parseFloat(qtyInput.dataset.servicePrice) * maxStock;
                         } else {
                             total += parseFloat(qtyInput.dataset.servicePrice) * qty;
@@ -521,13 +445,13 @@
                     getEl('current_service_add_total').innerText = fmtRp(total);
                 });
             });
-        } catch (error) { alert('Gagal memuat daftar service.'); console.error('Error fetching services:', error); }
+        } catch (error) { toastr.error('Gagal memuat daftar service.'); console.error('Error fetching services:', error); }
     };
 
     // --- Fetch and Populate Pakets for Modal Pemesanan ---
     const fetchAndPopulatePakets = async () => {
         try {
-            const res = await fetch('{{ route('api.pakets') }}');
+            const res = await fetch('{{ route('api.pakets') }}'); // Menggunakan API umum
             allAvailablePakets = await res.json();
             const paketSelect = getEl('paket_id_select');
             paketSelect.innerHTML = '<option value="">-- Pilih Paket --</option>'; // Clear existing options
@@ -540,7 +464,7 @@
             });
         } catch (error) {
             console.error('Error fetching pakets:', error);
-            alert('Gagal memuat daftar paket.');
+            toastr.error('Gagal memuat daftar paket.');
         }
     };
 
@@ -556,10 +480,8 @@
         if (selectedPaketId) {
             const selectedPaket = allAvailablePakets.find(p => p.id == selectedPaketId);
             if (selectedPaket) {
-                // Parse isi_paket from the selected package
-                const isiPaket = selectedPaket.isi_paket; // ini sudah array karena Model castsnya 'array'
+                const isiPaket = selectedPaket.isi_paket;
 
-                // Fill form fields based on package
                 if (isiPaket.durasi_jam === 0) {
                     isSepuasnyaCheckbox.checked = true;
                     durasiJamWrapper.style.display = 'none';
@@ -570,13 +492,11 @@
                     durasiJamInput.setAttribute('required', 'required');
                     durasiJamInput.value = isiPaket.durasi_jam;
                 }
-                
-                // Hide non-paket options and disable inputs
+
                 nonPaketOptionsDiv.style.display = 'none';
                 isSepuasnyaCheckbox.disabled = true;
                 durasiJamInput.disabled = true;
 
-                // Display package description preview
                 let desc = [];
                 if (isiPaket.harga_paket) desc.push(`Harga: ${fmtRp(isiPaket.harga_paket)}`);
                 if (isiPaket.durasi_jam !== undefined) {
@@ -585,52 +505,98 @@
                 }
                 if (isiPaket.services && isiPaket.services.length > 0) desc.push(`Service: ${isiPaket.services.length} item`);
                 if (isiPaket.deskripsi_tambahan) desc.push(isiPaket.deskripsi_tambahan);
-                
+
                 paketDeskripsiPreview.innerText = desc.join(' | ');
                 paketDeskripsiPreview.style.display = 'block';
 
-                // Change form action to 'pesanPaket'
-                getEl('formPesan').action = '{{ route('kasir.pesanPaket') }}';
-
+                getEl('formPesan').action = '{{ route('pemandu.pesanPaket') }}'; // Rute Pemandu
             }
         } else {
-            // No package selected, revert to non-paket options
             nonPaketOptionsDiv.style.display = 'block';
             isSepuasnyaCheckbox.disabled = false;
             durasiJamInput.disabled = false;
-            durasiJamInput.value = ''; // Clear durasi
-            isSepuasnyaCheckbox.checked = false; // Uncheck sepuasnya
+            durasiJamInput.value = '';
+            isSepuasnyaCheckbox.checked = false;
             durasiJamWrapper.style.display = 'block';
             durasiJamInput.required = true;
 
-            paketDeskripsiPreview.style.display = 'none'; // Hide preview
+            paketDeskripsiPreview.style.display = 'none';
 
-            // Set form action back to default
-            getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}';
+            getEl('formPesan').action = '{{ route('pemandu.pesanDurasi') }}'; // Rute Pemandu
         }
     });
 
-    // Handle change for is_sepuasnya checkbox (only if no package is selected)
     getEl('is_sepuasnya').addEventListener('change', function() {
-        if (getEl('paket_id_select').value) return; // Ignore if a package is selected
+        if (getEl('paket_id_select').value) return;
         const durasiWrapper = getEl('durasi_jam_wrapper'); const durasiInput = getEl('durasi_jam');
         if (this.checked) {
             durasiWrapper.style.display = 'none'; durasiInput.removeAttribute('required'); durasiInput.value = '';
-            getEl('formPesan').action = '{{ route('kasir.pesanSepuasnya') }}';
+            getEl('formPesan').action = '{{ route('pemandu.pesanSepuasnya') }}'; // Rute Pemandu
         } else {
             durasiWrapper.style.display = 'block'; durasiInput.setAttribute('required', 'required');
-            getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}';
+            getEl('formPesan').action = '{{ route('pemandu.pesanDurasi') }}'; // Rute Pemandu
         }
     });
+
+    getEl('formPesan').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+        try {
+            const formData = new FormData(form);
+            const body = Object.fromEntries(formData.entries());
+
+            // Handle checkbox for is_sepuasnya if it's not part of a package
+            if (!body.paket_id && form.querySelector('#is_sepuasnya').checked) {
+                body.is_sepuasnya = true;
+                delete body.durasi_jam; // Remove durasi_jam if sepuasnya
+            } else if (!body.paket_id) {
+                body.is_sepuasnya = false;
+            }
+
+            const res = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(body)
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                toastr.success(data.message || 'Pemesanan berhasil!');
+                closeModal();
+                fetchAndRenderMejas();
+            } else {
+                toastr.error('Gagal memesan: ' + (data.message || 'Terjadi kesalahan.'));
+                if (data.errors) {
+                    for (const key in data.errors) {
+                        toastr.error(data.errors[key][0]);
+                    }
+                }
+            }
+        } catch (error) {
+            toastr.error('Terjadi kesalahan jaringan atau server saat memesan.');
+            console.error('Error submitting formPesan:', error);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Mulai';
+        }
+    });
+
 
     getEl('formAddDuration').addEventListener('submit', async (e) => {
         e.preventDefault(); const pId = getEl('add_duration_penyewaan_id').value; const addDur = getEl('additional_durasi_jam').value;
         const submitBtn = e.target.querySelector('button[type="submit"]'); submitBtn.disabled = submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menambah...';
         try {
-            const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${pId}/add-duration`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ additional_durasi_jam: addDur }) });
-            const data = await res.json(); if (res.ok) { alert(data.message); closeAddDurationModal(); fetchAndRenderMejas(); }
-            else { alert('Gagal menambah durasi: ' + (data.message || 'Terjadi kesalahan.')); }
-        } catch (error) { alert('Terjadi kesalahan jaringan atau server saat menambah durasi.'); console.error('Error adding duration:', error); }
+            const res = await fetch(`{{ url('/pemandu/penyewaan/') }}/${pId}/add-duration`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ additional_durasi_jam: addDur }) }); // Rute Pemandu
+            const data = await res.json(); if (res.ok) { toastr.success(data.message); closeAddDurationModal(); fetchAndRenderMejas(); }
+            else { toastr.error('Gagal menambah durasi: ' + (data.message || 'Terjadi kesalahan.')); }
+        } catch (error) { toastr.error('Terjadi kesalahan jaringan atau server saat menambah durasi.'); console.error('Error adding duration:', error); }
         finally { submitBtn.disabled = false; submitBtn.innerHTML = 'Tambah Durasi'; }
     });
 
@@ -646,7 +612,7 @@
 
             if (qty > 0) {
                 if (qty > maxStock) {
-                    alert(`Jumlah ${serviceName} (${qty}) melebihi stok yang tersedia (${maxStock}). Mohon koreksi.`);
+                    toastr.warning(`Jumlah ${serviceName} (${qty}) melebihi stok yang tersedia (${maxStock}). Mohon koreksi.`);
                     stockExceeded = true;
                     return;
                 }
@@ -655,98 +621,31 @@
         });
 
         if (stockExceeded) return;
-        if (selSrv.length === 0) { alert('Pilih setidaknya satu service untuk ditambahkan.'); return; }
+        if (selSrv.length === 0) { toastr.warning('Pilih setidaknya satu service untuk ditambahkan.'); return; }
 
         const submitBtn = e.target.querySelector('button[type="submit"]'); submitBtn.disabled = submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menambah...';
         try {
-            const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${pId}/add-service`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ services: selSrv }) });
+            const res = await fetch(`{{ url('/pemandu/penyewaan/') }}/${pId}/add-service`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ services: selSrv }) }); // Rute Pemandu
             const data = await res.json();
-            if (res.ok) { alert(data.message); closeAddServiceModal(); fetchAndRenderMejas(); }
-            else { alert('Gagal menambah service: ' + (data.message || 'Terjadi kesalahan.')); }
-        } catch (error) { alert('Terjadi kesalahan jaringan atau server saat menambah service.'); console.error('Error adding service:', error); }
+            if (res.ok) { toastr.success(data.message); closeAddServiceModal(); fetchAndRenderMejas(); }
+            else { toastr.error('Gagal menambah service: ' + (data.message || 'Terjadi kesalahan.')); }
+        } catch (error) { toastr.error('Terjadi kesalahan jaringan atau server saat menambah service.'); console.error('Error adding service:', error); }
         finally { submitBtn.disabled = false; submitBtn.innerHTML = 'Tambah Service'; }
     });
 
-    getEl('formPembayaran').addEventListener('submit', async (e) => {
-        e.preventDefault(); const pId = getEl('payment_penyewaan_id').value; const kupon = getEl('kode_kupon').value;
-        const submitBtn = e.target.querySelector('button[type="submit"]'); submitBtn.disabled = submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
-        try {
-            const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${pId}/bayar`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ kode_kupon: kupon }) });
-            const data = await res.json();
-            if (res.ok) {
-                alert(data.message + ' Total bayar: ' + fmtRp(data.total_bayar)); closePaymentModal();
-                if (countdownIntervals[pId]) { clearInterval(countdownIntervals[pId]); delete countdownIntervals[pId]; }
-                fetchAndRenderMejas();
-            } else { alert('Gagal memproses pembayaran: ' + (data.message || 'Terjadi kesalahan.')); console.error('Pembayaran gagal:', data); }
-        } catch (error) { alert('Terjadi kesalahan jaringan atau server saat memproses pembayaran.'); console.error('Error submitting payment:', error); }
-        finally { submitBtn.disabled = false; submitBtn.innerHTML = 'Bayar Sekarang'; }
-    });
-    // --- New Function for QRIS Payment ---
-const handleQrisPayment = async () => {
-    const penyewaanId = getEl('payment_penyewaan_id').value;
-    const kuponCode = getEl('kode_kupon').value;
-    const qrisButton = getEl('btn-pay-qris');
+    // formPembayaran event listener DIHAPUS untuk Pemandu
 
-    // Nonaktifkan tombol dan tampilkan spinner
-    qrisButton.disabled = true;
-    qrisButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses QRIS...';
-
-    try {
-        const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${penyewaanId}/bayar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                kode_kupon: kuponCode,
-                is_qris: true // Mengirim flag bahwa ini adalah pembayaran QRIS
-            })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Pembayaran QRIS Berhasil!',
-                text: data.message + ' Total bayar: ' + fmtRp(data.total_bayar),
-                confirmButtonText: 'OK'
-            });
-            closePaymentModal();
-            // Hentikan timer jika ada
-            if (countdownIntervals[penyewaanId]) {
-                clearInterval(countdownIntervals[penyewaanId]);
-                delete countdownIntervals[penyewaanId];
-            }
-            fetchAndRenderMejas(); // Perbarui status meja
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Pembayaran QRIS Gagal!',
-                text: data.message || 'Terjadi kesalahan saat memproses pembayaran QRIS.',
-                confirmButtonText: 'OK'
-            });
-            console.error('Pembayaran QRIS gagal:', data);
-        }
-    } catch (error) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Terjadi Kesalahan Jaringan!',
-            text: 'Terjadi kesalahan jaringan atau server saat memproses pembayaran QRIS.',
-            confirmButtonText: 'OK'
-        });
-        console.error('Error submitting QRIS payment:', error);
-    } finally {
-        // Aktifkan kembali tombol
-        qrisButton.disabled = false;
-        qrisButton.innerHTML = 'Bayar dengan QRIS';
-    }
-};
 
     // --- Initial Load & Polling ---
     document.addEventListener('DOMContentLoaded', () => {
-        getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}'; // Default action on load
+        // Event listener untuk tombol "Pesan"
+        document.querySelectorAll('.btn-pesan-meja').forEach(button => {
+            button.addEventListener('click', () => {
+                openModal(button.dataset.mejaId);
+            });
+        });
+
+        getEl('formPesan').action = '{{ route('pemandu.pesanDurasi') }}'; // Default action on load for Pemandu
         fetchAndRenderMejas();
         setInterval(fetchAndRenderMejas, 5000);
     });
