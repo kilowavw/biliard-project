@@ -9,64 +9,71 @@ use Illuminate\Support\Facades\DB;
 class LaporanController extends Controller
 {
     /**
-     * Menampilkan laporan harian data penyewaan.
-     * Termasuk data tabel dan grafik total pendapatan per jam.
+     * Menampilkan laporan harian data penyewaan dengan pagination untuk detail transaksi.
      */
     public function harian(Request $request)
     {
-        // Mendapatkan tanggal dari request, default hari ini
-        $date = $request->input('date', date('Y-m-d')); // Y-m-d format
+        $date = $request->input('date', date('Y-m-d'));
 
-        // Ambil data penyewaan untuk tanggal tertentu
-        $penyewaans = Penyewaan::whereDate('waktu_mulai', $date)
-                                ->orderBy('waktu_mulai', 'asc')
-                                ->get();
+        // Ambil SEMUA data penyewaan untuk hari tersebut untuk menghitung agregat
+        $penyewaansCollection = Penyewaan::with('meja')
+                                          ->whereDate('waktu_mulai', $date)
+                                          ->orderBy('waktu_mulai', 'asc')
+                                          ->get();
 
-        // Agregasi data untuk grafik (total pendapatan per jam)
-        $dailyRevenue = Penyewaan::select(
-                                DB::raw('HOUR(waktu_mulai) as hour'),
-                                DB::raw('SUM(total_bayar) as total')
-                            )
-                            ->whereDate('waktu_mulai', $date)
-                            ->groupBy('hour')
-                            ->orderBy('hour', 'asc')
-                            ->get();
+        // 1. Total Pendapatan (Nett)
+        $totalPendapatan = $penyewaansCollection->sum('total_bayar');
 
-        $chartLabels = [];
-        $chartData = [];
+        // 2. Distribusi Pendapatan (Cash vs QRIS)
+        $qrisTotal = $penyewaansCollection->where('is_qris', true)->sum('total_bayar');
+        $cashTotal = $penyewaansCollection->where('is_qris', false)->sum('total_bayar');
 
-        // Inisialisasi label dan data untuk semua jam dalam sehari (0-23)
-        for ($i = 0; $i < 24; $i++) {
-            $chartLabels[] = sprintf('%02d:00', $i); // Format jam: 00:00, 01:00, dst.
-            $chartData[$i] = 0; // Default ke 0 jika tidak ada penjualan di jam tersebut
+        $paymentMethodDistribution = [];
+        if ($cashTotal > 0) {
+            $paymentMethodDistribution[] = ['label' => 'Cash', 'value' => $cashTotal];
+        }
+        if ($qrisTotal > 0) {
+            $paymentMethodDistribution[] = ['label' => 'QRIS', 'value' => $qrisTotal];
+        }
+        // Tambahkan kondisi jika tidak ada data sama sekali agar chart tidak error
+        if (empty($paymentMethodDistribution)) {
+            $paymentMethodDistribution[] = ['label' => 'Tidak Ada Data', 'value' => 1];
         }
 
-        foreach ($dailyRevenue as $data) {
-            $chartData[$data->hour] = $data->total;
-        }
+        // 3. Pendapatan Per Meja
+        $pendapatanPerMeja = $penyewaansCollection->groupBy('meja_id')->map(function ($items, $mejaId) {
+            $namaMeja = $items->first()->meja->nama_meja ?? 'Meja ' . $mejaId;
+            return [
+                'meja_id' => $mejaId,
+                'nama_meja' => $namaMeja,
+                'total_pendapatan' => $items->sum('total_bayar'),
+            ];
+        })->sortByDesc('total_pendapatan')->values();
 
-        $chartData = array_values($chartData); // Reset keys untuk array JavaScript
+        // Data detail penyewaan dengan pagination
+        $penyewaansPaginated = Penyewaan::with('meja')
+                                        ->whereDate('waktu_mulai', $date)
+                                        ->orderBy('waktu_mulai', 'desc') // Urutkan terbaru dulu
+                                        ->paginate(10); // Atur jumlah item per halaman, misalnya 10
 
-        return view('laporan.harian', compact('penyewaans', 'chartLabels', 'chartData', 'date'));
+        return view('laporan.harian', compact(
+            'date',
+            'totalPendapatan',
+            'paymentMethodDistribution',
+            'pendapatanPerMeja',
+            'penyewaansPaginated' // Menggunakan data yang sudah di-paginate untuk tabel detail
+        ));
     }
 
     /**
-     * Menampilkan laporan bulanan data penyewaan.
-     * Termasuk data tabel dan grafik total pendapatan per hari.
+     * Menampilkan laporan bulanan data penyewaan dengan pagination untuk detail transaksi.
      */
     public function bulanan(Request $request)
     {
-        // Mendapatkan tahun dan bulan dari request, default bulan/tahun sekarang
         $year = $request->input('year', date('Y'));
         $month = $request->input('month', date('n')); // 'n' untuk bulan tanpa leading zero (1-12)
 
-        // Ambil data penyewaan untuk bulan dan tahun tertentu
-        $penyewaans = Penyewaan::whereMonth('waktu_mulai', $month)
-                                ->whereYear('waktu_mulai', $year)
-                                ->orderBy('waktu_mulai', 'asc')
-                                ->get();
-
-        // Agregasi data untuk grafik (total pendapatan per hari)
+        // --- Data untuk Agregasi Grafik (Total Pendapatan Per Hari) ---
         $monthlyRevenue = Penyewaan::select(
                                 DB::raw('DAY(waktu_mulai) as day'),
                                 DB::raw('SUM(total_bayar) as total')
@@ -77,21 +84,59 @@ class LaporanController extends Controller
                             ->orderBy('day', 'asc')
                             ->get();
 
-        $chartLabels = [];
-        $chartData = [];
+        $chartLabelsDaily = [];
+        $chartDataDaily = [];
 
         // Inisialisasi label dan data untuk semua hari dalam bulan
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         for ($i = 1; $i <= $daysInMonth; $i++) {
-            $chartLabels[] = $i; // Label hari: 1, 2, 3, dst.
-            $chartData[$i] = 0; // Default ke 0 jika tidak ada penjualan di hari tersebut
+            $chartLabelsDaily[] = $i; // Label hari: 1, 2, 3, dst.
+            $chartDataDaily[$i] = 0; // Default ke 0 jika tidak ada penjualan di hari tersebut
         }
 
         foreach ($monthlyRevenue as $data) {
-            $chartData[$data->day] = $data->total;
+            $chartDataDaily[$data->day] = $data->total;
+        }
+        $chartDataDaily = array_values($chartDataDaily); // Reset keys untuk array JavaScript
+
+        // --- Data untuk Ringkasan Bulanan (Total Pendapatan, Distribusi Pembayaran, Pendapatan Per Meja) ---
+        // Ambil SEMUA data penyewaan untuk bulan tersebut untuk menghitung agregat
+        $penyewaansCollection = Penyewaan::with('meja')
+                                          ->whereMonth('waktu_mulai', $month)
+                                          ->whereYear('waktu_mulai', $year)
+                                          ->get();
+
+        $totalPendapatan = $penyewaansCollection->sum('total_bayar');
+
+        $qrisTotal = $penyewaansCollection->where('is_qris', true)->sum('total_bayar');
+        $cashTotal = $penyewaansCollection->where('is_qris', false)->sum('total_bayar');
+
+        $paymentMethodDistribution = [];
+        if ($cashTotal > 0) {
+            $paymentMethodDistribution[] = ['label' => 'Cash', 'value' => $cashTotal];
+        }
+        if ($qrisTotal > 0) {
+            $paymentMethodDistribution[] = ['label' => 'QRIS', 'value' => $qrisTotal];
+        }
+        if (empty($paymentMethodDistribution)) {
+            $paymentMethodDistribution[] = ['label' => 'Tidak Ada Data', 'value' => 1];
         }
 
-        $chartData = array_values($chartData); // Reset keys untuk array JavaScript
+        $pendapatanPerMeja = $penyewaansCollection->groupBy('meja_id')->map(function ($items, $mejaId) {
+            $namaMeja = $items->first()->meja->nama_meja ?? 'Meja ' . $mejaId;
+            return [
+                'meja_id' => $mejaId,
+                'nama_meja' => $namaMeja,
+                'total_pendapatan' => $items->sum('total_bayar'),
+            ];
+        })->sortByDesc('total_pendapatan')->values();
+
+        // Data detail penyewaan dengan pagination
+        $penyewaansPaginated = Penyewaan::with('meja')
+                                ->whereMonth('waktu_mulai', $month)
+                                ->whereYear('waktu_mulai', $year)
+                                ->orderBy('waktu_mulai', 'desc')
+                                ->paginate(10); // Paginate the detail table
 
         // Untuk dropdown filter bulan/tahun
         $months = [];
@@ -100,16 +145,29 @@ class LaporanController extends Controller
         }
         $years = range(date('Y') - 5, date('Y') + 1); // Contoh rentang tahun
 
-        return view('laporan.bulanan', compact('penyewaans', 'chartLabels', 'chartData', 'year', 'month', 'months', 'years'));
+        return view('laporan.bulanan', compact(
+            'penyewaansPaginated', // Menggunakan data yang sudah di-paginate
+            'totalPendapatan',
+            'paymentMethodDistribution',
+            'pendapatanPerMeja',
+            'chartLabelsDaily', // Untuk grafik bar ApexCharts (Daily Revenue)
+            'chartDataDaily',   // Untuk grafik bar ApexCharts (Daily Revenue)
+            'year',
+            'month',
+            'months',
+            'years'
+        ));
     }
 
-     public function tahunan(Request $request)
+    /**
+     * Menampilkan laporan tahunan yang diagregasi per bulan dengan pagination untuk detail transaksi.
+     */
+    public function tahunan(Request $request)
     {
-        // Mendapatkan tahun dari request, default tahun sekarang
         $year = $request->input('year', date('Y'));
 
-        // Ambil data agregasi total pendapatan per bulan untuk tahun tertentu
-        $monthlyRevenue = Penyewaan::select(
+        // --- Data untuk Grafik "Total Pendapatan Per Bulan" (ApexCharts Bar Chart) ---
+        $monthlyRevenueRaw = Penyewaan::select(
                                 DB::raw('MONTH(waktu_mulai) as month_num'),
                                 DB::raw('SUM(total_bayar) as total')
                             )
@@ -118,32 +176,69 @@ class LaporanController extends Controller
                             ->orderBy('month_num', 'asc')
                             ->get();
 
-        $chartLabels = []; // Untuk nama bulan
-        $chartData = [];   // Untuk total pendapatan per bulan
-        $tableData = [];   // Untuk data tabel ringkasan per bulan
+        $chartLabelsMonthly = []; // Untuk nama bulan
+        $chartDataMonthly = [];   // Untuk total pendapatan per bulan
 
-        // Inisialisasi label dan data untuk semua 12 bulan
         for ($i = 1; $i <= 12; $i++) {
             $monthName = date('F', mktime(0, 0, 0, $i, 1)); // Mendapatkan nama bulan (e.g., January)
-            $chartLabels[] = $monthName;
-            $chartData[$i] = 0; // Default ke 0 jika tidak ada penjualan di bulan tersebut
-            $tableData[$i] = [
-                'month_name' => $monthName,
-                'total_revenue' => 0
+            $chartLabelsMonthly[] = $monthName;
+            $chartDataMonthly[$i] = 0; // Default ke 0 jika tidak ada penjualan di bulan tersebut
+        }
+
+        foreach ($monthlyRevenueRaw as $data) {
+            $chartDataMonthly[$data->month_num] = $data->total;
+        }
+        $chartDataMonthly = array_values($chartDataMonthly); // Reset keys untuk array JavaScript
+
+        // --- Data untuk Ringkasan Tahunan (Total Pendapatan, Distribusi Pembayaran, Pendapatan Per Meja) ---
+        // Ambil SEMUA data penyewaan untuk tahun tersebut untuk menghitung agregat
+        $penyewaansCollection = Penyewaan::with('meja')
+                                          ->whereYear('waktu_mulai', $year)
+                                          ->get(); // Get all for aggregates
+
+        $totalPendapatan = $penyewaansCollection->sum('total_bayar');
+
+        $qrisTotal = $penyewaansCollection->where('is_qris', true)->sum('total_bayar');
+        $cashTotal = $penyewaansCollection->where('is_qris', false)->sum('total_bayar');
+
+        $paymentMethodDistribution = [];
+        if ($cashTotal > 0) {
+            $paymentMethodDistribution[] = ['label' => 'Cash', 'value' => $cashTotal];
+        }
+        if ($qrisTotal > 0) {
+            $paymentMethodDistribution[] = ['label' => 'QRIS', 'value' => $qrisTotal];
+        }
+        if (empty($paymentMethodDistribution)) {
+            $paymentMethodDistribution[] = ['label' => 'Tidak Ada Data', 'value' => 1];
+        }
+
+        $pendapatanPerMeja = $penyewaansCollection->groupBy('meja_id')->map(function ($items, $mejaId) {
+            $namaMeja = $items->first()->meja->nama_meja ?? 'Meja ' . $mejaId;
+            return [
+                'meja_id' => $mejaId,
+                'nama_meja' => $namaMeja,
+                'total_pendapatan' => $items->sum('total_bayar'),
             ];
-        }
+        })->sortByDesc('total_pendapatan')->values();
 
-        foreach ($monthlyRevenue as $data) {
-            $chartData[$data->month_num] = $data->total;
-            $tableData[$data->month_num]['total_revenue'] = $data->total;
-        }
-
-        $chartData = array_values($chartData); // Reset keys untuk array JavaScript
-        $tableData = array_values($tableData); // Reset keys untuk array tabel
+        // Data detail penyewaan dengan pagination
+        $penyewaansPaginated = Penyewaan::with('meja')
+                                        ->whereYear('waktu_mulai', $year)
+                                        ->orderBy('waktu_mulai', 'desc')
+                                        ->paginate(10); // Paginate the detail table
 
         // Untuk dropdown filter tahun
         $years = range(date('Y') - 5, date('Y') + 1); // Contoh rentang tahun
 
-        return view('laporan.tahunan', compact('tableData', 'chartLabels', 'chartData', 'year', 'years'));
+        return view('laporan.tahunan', compact(
+            'penyewaansPaginated', // Menggunakan data yang sudah di-paginate
+            'totalPendapatan',
+            'paymentMethodDistribution',
+            'pendapatanPerMeja',
+            'chartLabelsMonthly', // Untuk grafik bar ApexCharts (Monthly Revenue)
+            'chartDataMonthly',   // Untuk grafik bar ApexCharts (Monthly Revenue)
+            'year',
+            'years'
+        ));
     }
 }

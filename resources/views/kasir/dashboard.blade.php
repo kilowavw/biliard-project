@@ -12,8 +12,9 @@
 
     <div id="meja-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-black">
         @foreach ($mejas as $meja)
-        <div id="meja-card-{{ $meja->id }}" class="p-4 border rounded shadow @if($meja->status === 'dipakai') bg-red-100 @else bg-green-100 @endif">
+        <div id="meja-card-{{ $meja->id }}" class="p-4 border rounded shadow @if($meja->status === 'dipakai') bg-green-100 @else bg-neutral-600 @endif">
             <h2 class="text-lg font-semibold">{{ $meja->nama_meja }}</h2>
+            <img src="{{ asset('gambar/Meja.png') }}" alt="Logo" width="200">
             <p id="status-meja-{{ $meja->id }}">Status: {{ $meja->status }}</p>
 
             @if ($meja->status === 'kosong')
@@ -49,7 +50,7 @@
             <div id="non_paket_options">
                 <div class="mb-3">
                     <label class="inline-flex items-center">
-                        <input type="checkbox" id="is_sepuasnya" name="is_sepuasnya" class="form-checkbox h-5 w-5 text-blue-600">
+                        <input type="checkbox" id="is_sepuasnya" name="is_sepuasnya" class="form-checkbox h-5 w-5 text-neutral-600">
                         <span class="ml-2 text-gray-700">Main Sepuasnya</span>
                     </label>
                 </div>
@@ -103,7 +104,7 @@
                 <!-- Services will be loaded here via JS -->
             </div>
 
-            <p class="text-lg font-bold">Total Tambahan Service: <strong id="current_service_add_total" class="text-blue-600">Rp 0</strong></p>
+            <p class="text-lg font-bold">Total Tambahan Service: <strong id="current_service_add_total" class="text-neutral-600">Rp 0</strong></p>
 
             <div class="modal-footer">
                 <button type="button" onclick="closeAddServiceModal()" class="btn btn-secondary">Batal</button>
@@ -116,7 +117,7 @@
 
 {{-- Modal Pembayaran --}}
 <div id="paymentModal" style="display:none" class="modal-overlay">
-    <div class="modal-content">
+     <div class="modal-content bg-white p-6 rounded shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <h2 class="text-xl font-bold mb-4">Detail Pembayaran</h2>
         <form id="formPembayaran">
             @csrf
@@ -139,11 +140,11 @@
                 <small class="text-gray-500">Biarkan kosong jika tidak ada kupon.</small>
             </div>
             <p class="text-lg font-bold">Diskon: <strong id="payment_diskon" class="text-red-500"></strong></p>
-            <p class="text-xl font-bold">Total Pembayaran: <strong id="payment_total_final" class="text-green-600"></strong></p>
+            <p class="text-xl font-bold">Total Pembayaran: <strong id="payment_total_final" class="text-neutral-600"></strong></p>
             <div class="modal-footer">
                 <button type="button" onclick="closePaymentModal()" class="btn btn-secondary">Batal</button>
                 <button type="submit" class="btn btn-primary">Bayar Sekarang</button>
-                 <button type="button" id="btn-pay-qris" onclick="handleQrisPayment()" class="btn bg-blue-500 hover:bg-blue-600 text-white">Bayar dengan QRIS</button>
+                 <button type="button" id="btn-pay-qris" onclick="handleQrisPayment()" class="btn bg-neutral-600 hover:bg-neutral-600 text-white">Bayar dengan QRIS</button>
             </div>
         </form>
     </div>
@@ -332,7 +333,7 @@
                 const penyewaanDivEl = card.querySelector(`#penyewaan-${mejaId}`);
 
                 if (penyewaanForThisMeja) {
-                    card.classList.remove('bg-green-100'); card.classList.add('bg-red-100');
+                    card.classList.remove('bg-red-100'); card.classList.add('bg-green-100');
                     if (statusMejaEl) statusMejaEl.innerText = 'Status: dipakai';
                     if (pesanBtnEl) pesanBtnEl.style.display = 'none';
 
@@ -424,7 +425,7 @@
                         }
                     }
                 } else {
-                    card.classList.remove('bg-red-100'); card.classList.add('bg-green-100');
+                    card.classList.remove('bg-green-100'); card.classList.add('bg-neutral-600');
                     if (statusMejaEl) statusMejaEl.innerText = 'Status: kosong';
                     if (penyewaanDivEl) penyewaanDivEl.innerHTML = '';
 

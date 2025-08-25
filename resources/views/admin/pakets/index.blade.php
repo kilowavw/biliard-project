@@ -21,52 +21,82 @@
                 <tr class="bg-[#2a2a2a] text-gray-300 uppercase text-sm leading-normal">
                     <th class="py-3 px-6 text-left">ID</th>
                     <th class="py-3 px-6 text-left">Nama Paket</th>
+                    <th class="py-3 px-6 text-left">Harga</th>
+                    <th class="py-3 px-6 text-left">Durasi Jam</th>
+                    <th class="py-3 px-6 text-left">Service</th>
                     <th class="py-3 px-6 text-left">Detail Paket</th>
                     <th class="py-3 px-6 text-left">Aktif</th>
                     <th class="py-3 px-6 text-center">Aksi</th>
                 </tr>
             </thead>
             <tbody class="text-gray-400 text-sm font-light">
-                @foreach($pakets as $paket)
-                <tr class="border-b border-gray-700 hover:bg-[#232323]">
-                    <td class="py-3 px-6 text-left whitespace-nowrap">{{ $paket->id }}</td>
-                    <td class="py-3 px-6 text-left">{{ $paket->nama_paket }}</td>
-                    <td class="py-3 px-6 text-left">
-                          @php
-                                $isiPaket = $paket->isi_paket;
-                                $desc = [];
-                                if (isset($isiPaket['harga_paket'])) $desc[] = 'Harga: Rp' . number_format($isiPaket['harga_paket'], 0, ',', '.');
-                                if (isset($isiPaket['durasi_jam']) && $isiPaket['durasi_jam'] > 0) $desc[] = 'Durasi: ' . $isiPaket['durasi_jam'] . ' jam';
-                                elseif (isset($isiPaket['durasi_jam']) && $isiPaket['durasi_jam'] == 0) $desc[] = 'Durasi: Sepuasnya';
-                                if (isset($isiPaket['deskripsi_tambahan']) && !empty($isiPaket['deskripsi_tambahan'])) $desc[] = $isiPaket['deskripsi_tambahan'];
-                                if (isset($isiPaket['services']) && count($isiPaket['services']) > 0) {
-                                    $serviceNames = collect($isiPaket['services'])->pluck('nama')->implode(', ');
-                                    $desc[] = 'Service: ' . $serviceNames;
-                                }
-                            @endphp
-                            {{ implode(', ', array_filter($desc)) ?: 'Tidak ada detail' }}
-                    </td>
-                    <td class="py-3 px-6 text-left">
-                        @if($paket->aktif)
-                            <span class="bg-green-600 text-white text-xs font-semibold px-2.5 py-0.5 rounded-full">Aktif</span>
-                        @else
-                            <span class="bg-red-600 text-white text-xs font-semibold px-2.5 py-0.5 rounded-full">Tidak Aktif</span>
-                        @endif
-                    </td>
-                    <td class="py-3 px-6 text-center">
-                        <div class="flex item-center justify-center space-x-2">
-                            <form action="{{ route('admin.pakets.destroy', $paket->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus paket ini?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="w-8 h-8 rounded-full bg-red-700 hover:bg-red-800 flex items-center justify-center text-white" title="Hapus">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
+    @foreach($pakets as $paket)
+    @php
+        $isiPaket = $paket->isi_paket;
+
+        // ambil harga & durasi
+        $harga = isset($isiPaket['harga_paket']) ? 'Rp' . number_format($isiPaket['harga_paket'], 0, ',', '.') : '-';
+        $durasi = isset($isiPaket['durasi_jam']) 
+            ? ($isiPaket['durasi_jam'] == 0 ? 'Sepuasnya' : $isiPaket['durasi_jam'] . ' jam') 
+            : '-';
+
+        // ambil service (khusus utk kolom Service)
+        $serviceNames = (isset($isiPaket['services']) && count($isiPaket['services']) > 0) 
+            ? collect($isiPaket['services'])->pluck('nama')->implode(', ') 
+            : '-';
+
+        // detail paket (hanya deskripsi tambahan aja biar beda dengan kolom Service)
+        $desc = [];
+        if (!empty($isiPaket['deskripsi_tambahan'])) $desc[] = $isiPaket['deskripsi_tambahan'];
+    @endphp
+
+    <tr class="border-b border-gray-700 hover:bg-[#232323]">
+        <!-- ID -->
+        <td class="py-3 px-6 text-left whitespace-nowrap">{{ $paket->id }}</td>
+
+        <!-- Nama Paket -->
+        <td class="py-3 px-6 text-left">{{ $paket->nama_paket }}</td>
+
+        <!-- Harga -->
+        <td class="py-3 px-6 text-left">{{ $harga }}</td>
+
+        <!-- Durasi -->
+        <td class="py-3 px-6 text-left">{{ $durasi }}</td>
+
+        <!-- Service -->
+        <td class="py-3 px-6 text-left">{{ $serviceNames }}</td>
+
+        <!-- Detail Paket -->
+        <td class="py-3 px-6 text-left">
+            {{ implode(', ', array_filter($desc)) ?: 'Tidak ada detail' }}
+        </td>
+
+        <!-- Status -->
+        <td class="py-3 px-6 text-left">
+            @if($paket->aktif)
+                <span class="bg-green-600 text-white text-xs font-semibold px-2.5 py-0.5 rounded-full">Aktif</span>
+            @else
+                <span class="bg-red-600 text-white text-xs font-semibold px-2.5 py-0.5 rounded-full">Tidak Aktif</span>
+            @endif
+        </td>
+
+        <!-- Aksi -->
+        <td class="py-3 px-6 text-center">
+            <div class="flex item-center justify-center space-x-2">
+                <form action="{{ route('admin.pakets.destroy', $paket->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus paket ini?');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="w-8 h-8 rounded-full bg-red-700 hover:bg-red-800 flex items-center justify-center text-white" title="Hapus">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </td>
+    </tr>
+    @endforeach
+</tbody>
+
+
         </table>
 
         <div class="mt-4">
@@ -175,7 +205,7 @@
 
         const displayMessage = (type, message) => {
             const alertDiv = getEl('ajax-response-message');
-            alertDiv.className = `flex items-center p-4 mb-4 text-sm rounded-lg ${type === 'success' ? 'text-green-800 bg-green-50 dark:bg-green-800 dark:text-green-400' : 'text-red-800 bg-red-50 dark:bg-red-800 dark:text-red-400'}`;
+            alertDiv.className = flex items-center p-4 mb-4 text-sm rounded-lg ${type === 'success' ? 'text-green-800 bg-green-50 dark:bg-green-800 dark:text-green-400' : 'text-red-800 bg-red-50 dark:bg-red-800 dark:text-red-400'};
             alertDiv.innerHTML = `
                 <svg class="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
@@ -196,25 +226,25 @@
         };
 
         const clearErrors = (formId) => {
-            document.querySelectorAll(`#${formId} p[id$="-error"]`).forEach(p => p.innerText = '');
-            document.querySelectorAll(`#${formId} .border-red-500`).forEach(el => el.classList.remove('border-red-500'));
+            document.querySelectorAll(#${formId} p[id$="-error"]).forEach(p => p.innerText = '');
+            document.querySelectorAll(#${formId} .border-red-500).forEach(el => el.classList.remove('border-red-500'));
         };
 
         const displayErrors = (formId, errors) => {
             clearErrors(formId);
             for (const field in errors) {
-                const errorElId = `${formId}-${field.replace(/\./g, '-')}-error`;
+                const errorElId = ${formId}-${field.replace(/\./g, '-')}-error;
                 const errorEl = getEl(errorElId);
 
                 if (errorEl) {
                     errorEl.innerText = errors[field][0];
                 }
 
-                let inputEl = document.querySelector(`#${formId} [name="${field}"]`);
+                let inputEl = document.querySelector(#${formId} [name="${field}"]);
                 if (!inputEl && field.includes('.')) {
                     const parts = field.split('.');
                     if (parts.length === 3 && parts[0] === 'services') {
-                        inputEl = document.querySelector(`#${formId} input[name="services[${parts[1]}][${parts[2]}]"]`);
+                        inputEl = document.querySelector(#${formId} input[name="services[${parts[1]}][${parts[2]}]"]);
                     }
                 }
                 if (inputEl) {

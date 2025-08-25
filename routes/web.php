@@ -12,6 +12,8 @@ use App\Http\Controllers\KuponController;
 use App\Http\Controllers\PaketController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PemanduController;
+use App\Http\Controllers\ProfilController;
+
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [LoginController::class, 'index'])->name('landing');
@@ -37,7 +39,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('admin/mejas', MejaController::class)->except(['create', 'show', 'edit'])->names('admin.mejas');
 
         // CRUD service untuk Admin 
-        Route::resource('admin/services', ServiceController::class)->except(['create', 'show', 'edit'])->names('admin.services'); // Tambahkan ini
+      // Tambahkan ini
 
         Route::resource('admin/kupons', KuponController::class)->except(['create', 'show', 'edit'])->names('admin.kupons');
 
@@ -84,8 +86,11 @@ Route::middleware(['auth'])->group(function () {
         
         Route::post('/kasir/penyewaan/{penyewaan}/bayar', [KasirController::class, 'processPayment'])->name('kasir.processPayment');
 
+         Route::get('/kasir/service-order', [ServiceController::class, 'kasirServiceOrderIndex'])->name('kasir.serviceOrderIndex');
+        Route::post('/kasir/service-order/process', [ServiceController::class, 'processServiceOrder'])->name('kasir.processServiceOrder');
+        Route::put('/kasir/service-transactions/{transaction}/update-status', [ServiceController::class, 'updateServiceTransactionPaymentStatus'])->name('kasir.updateServiceTransactionStatus'); // Untuk bayar nanti
         // NEW: Rute API untuk validasi kupon
-        Route::get('/api/kupon/validate', [KuponController::class, 'validateKupon'])->name('api.kupon.validate');
+
     });
 
     // Pemandu AREA (Mirip Kasir tapi tanpa pembayaran, hanya pesan dan tambah service)
@@ -105,9 +110,15 @@ Route::middleware('role:pemandu')->group(function () {
   
 });
   // Pemandu juga butuh API untuk daftar service dan paket
+    Route::get('/api/kupon/validate', [KuponController::class, 'validateKupon'])->name('api.kupon.validate');
     Route::get('/api/services', [ServiceController::class, 'getServicesJson'])->name('api.services'); // Reuse existing API
     Route::get('/api/pakets', [PaketController::class, 'getPaketsJson'])->name('api.pakets');     // Reuse existing API
+      Route::resource('admin/services', ServiceController::class)->except(['create', 'show', 'edit'])->names('admin.services'); 
     
 Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('laporan.harian');
 Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
+Route::get('/laporan/tahunan', [LaporanController::class, 'tahunan'])->name('laporan.tahunan');
+
+Route::get('/profile', [ProfilController::class, 'index'])->name('profile');
+
 });

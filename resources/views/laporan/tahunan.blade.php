@@ -1,12 +1,13 @@
 @extends('default')
 
-@section('title', 'Laporan Harian')
+@section('title', 'Laporan Tahunan')
 
 @section('content')
 
 <?php
 // Variabel PHP sudah disediakan dari controller:
-// $date, $totalPendapatan, $paymentMethodDistribution, $pendapatanPerMeja, $penyewaansPaginated
+// $penyewaansPaginated, $totalPendapatan, $paymentMethodDistribution, $pendapatanPerMeja
+// $chartLabelsMonthly, $chartDataMonthly, $year, $years
 
 $headers = [
     'ID', 'Nama Penyewa', 'Meja', 'Durasi (Jam)', 'Harga/Jam',
@@ -15,10 +16,10 @@ $headers = [
 ?>
 
 <div class="container mx-auto p-4 md:p-6 bg-[#121212] text-white min-h-screen">
-    <h1 class="text-3xl font-bold mb-6 text-white">Laporan Harian Penyewaan</h1>
+    <h1 class="text-3xl font-bold mb-6 text-white">Laporan Tahunan Penyewaan</h1>
 
-    <form id="date-form" action="{{ route('laporan.harian') }}" method="GET" class="mb-6 flex flex-col md:flex-row items-center gap-4">
-        {{-- Link untuk laporan harian --}}
+    <form id="year-form" action="{{ route('laporan.tahunan') }}" method="GET" class="mb-6 flex flex-col md:flex-row items-center gap-4">
+         {{-- Link untuk laporan harian --}}
         <a href="{{ route('laporan.harian') }}" class="flex items-center px-4 py-2 rounded
                     {{ request()->routeIs('laporan.harian') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-calendar-day mr-3"></i> Laporan Harian
@@ -35,24 +36,22 @@ $headers = [
                     <i class="fa-solid fa-calendar-days mr-3"></i> Laporan Tahunan
                 </a>
 
-        <label for="report-date" class="block text-sm font-medium text-gray-300">Pilih Tanggal:</label>
-        <div class="relative max-w-sm">
-            <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
-                <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
-                </svg>
-            </div>
-            <input type="date" id="report-date" name="date" value="{{ $date }}"
-                   class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5">
-        </div>
+
+        <label for="report-year" class="block text-sm font-medium text-gray-300">Pilih Tahun:</label>
+        <select id="report-year" name="year"
+                class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5">
+            @foreach($years as $y)
+                <option value="{{ $y }}" {{ $y == $year ? 'selected' : '' }}>{{ $y }}</option>
+            @endforeach
+        </select>
         <button type="submit" class="hidden">Submit</button>
     </form>
 
-    {{-- Total Pendapatan --}}
+    {{-- Total Pendapatan Tahunan --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md flex items-center justify-between border border-gray-700">
             <div>
-                <p class="text-sm font-medium text-gray-400">Total Pendapatan (Nett) {{ date('d F Y', strtotime($date)) }}</p>
+                <p class="text-sm font-medium text-gray-400">Total Pendapatan (Nett) Tahun {{ $year }}</p>
                 <p id="total-pendapatan" class="text-3xl font-bold text-white mt-1">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>
             </div>
             <div class="p-3 bg-blue-900 rounded-full">
@@ -61,10 +60,20 @@ $headers = [
         </div>
     </div>
 
+    {{-- Grafik Tren Pendapatan Bulanan (ApexCharts) --}}
+    <div class="w-full bg-[#1e1e1e] rounded-lg shadow dark:bg-gray-800 p-4 md:p-6 mb-8 border border-gray-700">
+        <div class="flex justify-between mb-3">
+            <div class="flex justify-center items-center">
+                <h5 class="text-xl font-bold leading-none text-gray-900 dark:text-white pe-1">Tren Pendapatan Tahun {{ $year }} (Per Bulan)</h5>
+            </div>
+        </div>
+        <div id="yearly-monthly-revenue-chart"></div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {{-- Grafik Distribusi Pendapatan (Chart.js Doughnut) --}}
         <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md border border-gray-700">
-            <h2 class="text-xl font-semibold mb-4 text-white">Distribusi Pendapatan {{ date('d F Y', strtotime($date)) }}</h2>
+            <h2 class="text-xl font-semibold mb-4 text-white">Distribusi Pendapatan Tahun {{ $year }}</h2>
             <div class="chart-container w-full h-80 flex items-center justify-center">
                 <canvas id="paymentMethodChart"></canvas>
             </div>
@@ -72,10 +81,9 @@ $headers = [
                 *Data distribusi Cash & QRIS diambil dari kolom 'is_qris'.
             </p>
         </div>
-        {{-- Jika Anda ingin menambahkan grafik tren per jam di sini, tempatkan ApexCharts seperti contoh lainnya --}}
     </div>
 
-    <h2 class="text-xl font-semibold mb-4 text-white">Pendapatan Per Meja {{ date('d F Y', strtotime($date)) }}</h2>
+    <h2 class="text-xl font-semibold mb-4 text-white">Pendapatan Per Meja Tahun {{ $year }}</h2>
     <div id="pendapatan-meja-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
         @forelse ($pendapatanPerMeja as $meja)
             <div class="bg-[#1e1e1e] p-4 rounded-lg shadow-md border border-gray-700 hover:bg-[#232323] transition-colors duration-200">
@@ -83,17 +91,17 @@ $headers = [
                 <p class="text-xl font-bold text-green-400 mt-2">Rp {{ number_format($meja['total_pendapatan'], 0, ',', '.') }}</p>
             </div>
         @empty
-            <p class="text-gray-400 col-span-full">Tidak ada pendapatan tercatat untuk meja pada tanggal ini.</p>
+            <p class="text-gray-400 col-span-full">Tidak ada pendapatan tercatat untuk meja pada tahun ini.</p>
         @endforelse
     </div>
 
-    <h2 class="text-xl font-semibold mb-4 text-white">Detail Penyewaan {{ date('d F Y', strtotime($date)) }}</h2>
+    <h2 class="text-xl font-semibold mb-4 text-white">Detail Penyewaan Tahun {{ $year }}</h2>
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-700 ">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-700 text-gray-300">
                 <tr>
                     @foreach($headers as $header)
-                        <th scope="col" class="px-6 py-3 text-white">{{ $header }}</th>
+                         <th scope="col" class="px-6 py-3 text-white">{{ $header }}</th>
                     @endforeach
                 </tr>
             </thead>
@@ -107,14 +115,14 @@ $headers = [
                         <td class="px-6 py-4">{{ number_format($penyewaan->harga_per_jam, 0, ',', '.') }}</td>
                         <td class="px-6 py-4">{{ number_format($penyewaan->total_service, 0, ',', '.') }}</td>
                         <td class="px-6 py-4">{{ number_format($penyewaan->total_bayar, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->waktu_mulai->format('H:i:s') }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->waktu_selesai ? $penyewaan->waktu_selesai->format('H:i:s') : '-' }}</td>
+                        <td class="px-6 py-4">{{ $penyewaan->waktu_mulai->format('d/m/Y H:i:s') }}</td>
+                        <td class="px-6 py-4">{{ $penyewaan->waktu_selesai ? $penyewaan->waktu_selesai->format('d/m/Y H:i:s') : '-' }}</td>
                         <td class="px-6 py-4">{{ $penyewaan->status }}</td>
                         <td class="px-6 py-4">{{ $penyewaan->is_qris ? 'QRIS' : 'Cash' }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada data penyewaan untuk tanggal ini.</td>
+                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada data penyewaan untuk tahun ini.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -132,8 +140,8 @@ $headers = [
 @section('script')
 {{-- Chart.js untuk Doughnut Chart --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{{-- ApexCharts jika Anda ingin menambahkan grafik tren harian per jam --}}
-{{-- <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script> --}}
+{{-- ApexCharts untuk Bar Chart --}}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script>
 
 <script>
     const fmtRp = (amount) => {
@@ -162,7 +170,7 @@ $headers = [
                 labels: labels,
                 datasets: [{
                     data: values,
-                    backgroundColor: ['#10B981', '#3B82F6', '#6B7280'], // Hijau, Biru, Abu-abu
+                    backgroundColor: ['#10B981', '#3B82F6', '#6B7280'],
                     hoverOffset: 4
                 }]
             },
@@ -172,7 +180,7 @@ $headers = [
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { color: '#D1D5DB' } // Warna teks legend
+                        labels: { color: '#D1D5DB' }
                     },
                     tooltip: {
                         callbacks: {
@@ -194,12 +202,107 @@ $headers = [
         });
     };
 
+    const chartLabelsMonthly = @json($chartLabelsMonthly);
+    const chartDataMonthly = @json($chartDataMonthly);
+
+    const monthlyRevenueChartOptions = {
+        series: [{
+            name: "Pendapatan",
+            data: chartDataMonthly,
+        }],
+        chart: {
+            height: 350,
+            type: "bar",
+            fontFamily: "Inter, sans-serif",
+            toolbar: {
+                show: false,
+            },
+        },
+        plotOptions: {
+            bar: {
+                horizontal: false,
+                columnWidth: "70%",
+                borderRadiusApplication: "end",
+                borderRadius: 8,
+            },
+        },
+        tooltip: {
+            theme: 'dark',  
+            shared: true,
+            intersect: false,
+            style: {
+                fontFamily: "Inter, sans-serif",
+            },
+            y: {
+                formatter: function (val) {
+                    return fmtRp(val);
+                }
+            }
+        },
+        states: {
+            hover: {
+                filter: {
+                    type: "darken",
+                    value: 1,
+                },
+            },
+        },
+        stroke: {
+            show: true,
+            width: 0,
+            colors: ["transparent"],
+        },
+        grid: {
+            show: false,
+            strokeDashArray: 4,
+            padding: {
+                left: 2,
+                right: 2,
+                top: -14
+            },
+        },
+        dataLabels: {
+            enabled: false,
+        },
+        legend: {
+            show: false,
+        },
+        xaxis: {
+            categories: chartLabelsMonthly,
+            labels: {
+                show: true,
+                style: {
+                    fontFamily: "Inter, sans-serif",
+                    cssClass: 'text-xs font-normal fill-gray-500 dark:fill-gray-400'
+                }
+            },
+            axisBorder: {
+                show: false,
+            },
+            axisTicks: {
+                show: false,
+            },
+        },
+        yaxis: {
+            show: false,
+        },
+        fill: {
+            opacity: 1,
+            colors: ['#3B82F6']
+        }
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         renderPaymentMethodChart(paymentMethodDistributionData);
 
-        const dateInput = document.getElementById('report-date');
-        dateInput.addEventListener('change', () => {
-            document.getElementById('date-form').submit();
+        if (document.getElementById("yearly-monthly-revenue-chart") && typeof ApexCharts !== 'undefined') {
+            const chart = new ApexCharts(document.getElementById("yearly-monthly-revenue-chart"), monthlyRevenueChartOptions);
+            chart.render();
+        }
+
+        const yearSelect = document.getElementById('report-year');
+        yearSelect.addEventListener('change', () => {
+            document.getElementById('year-form').submit();
         });
     });
 </script>

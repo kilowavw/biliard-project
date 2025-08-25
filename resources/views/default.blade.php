@@ -129,29 +129,36 @@
                     {{ request()->routeIs('admin.mejas.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-table-tennis-paddle-ball mr-3"></i> Meja
                 </a>
-                @endif
-                
-               
 
-                {{-- Services Menu --}}
-                <a href="{{ route('admin.services.index') }}" class="flex items-center px-4 py-2 rounded
-                    {{ request()->routeIs('admin.services.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                    <i class="fa-solid fa-mug-hot mr-3"></i> Services
-                </a>
-                
-                {{-- Kupon Menu --}}
+                 {{-- Kupon Menu --}}
                 <a href="{{ route('admin.kupons.index') }}" class="flex items-center px-4 py-2 rounded
                     {{ request()->routeIs('kupons.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-tags mr-3"></i> Kupon
                 </a>
 
-                 
+                {{-- Services Menu (Admin) --}}
+                <a href="{{ route('admin.services.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('admin.services.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-mug-hot mr-3"></i> Layanan
+                </a>
+
                 {{-- Paket Menu --}}
                 <a href="{{ route('admin.pakets.index') }}" class="flex items-center px-4 py-2 rounded
                     {{ request()->routeIs('pakets.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-box-open mr-3"></i> Paket
                 </a>
 
+                @endif
+                
+                 @if(auth()->user()->role == 'kasir' )
+                    <a href="{{ route('kasir.serviceOrderIndex') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('kasir.serviceOrderIndex') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-mug-hot mr-3"></i> Layanan
+                </a>
+                @endif
+
+             
+                
                 {{-- Pengaturan Harga Menu --}}
                 @if(auth()->user()->role == 'admin' || auth()->user()->role == 'bos')
                 <a href="{{ route('admin.harga_settings.index') }}" class="flex items-center px-4 py-2 rounded
