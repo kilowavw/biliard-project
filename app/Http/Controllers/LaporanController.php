@@ -12,43 +12,84 @@ class LaporanController extends Controller
      * Menampilkan laporan harian data penyewaan.
      * Termasuk data tabel dan grafik total pendapatan per jam.
      */
-    public function harian(Request $request)
+public function harian(Request $request)
     {
-        // Mendapatkan tanggal dari request, default hari ini
-        $date = $request->input('date', date('Y-m-d')); // Y-m-d format
+        $date = $request->input('date', date('Y-m-d'));
 
-        // Ambil data penyewaan untuk tanggal tertentu
-        $penyewaans = Penyewaan::whereDate('waktu_mulai', $date)
-                                ->orderBy('waktu_mulai', 'asc')
-                                ->get();
+        // Ambil data penyewaan + relasi meja
+        $penyewaans = Penyewaan::with('meja')
+            ->whereDate('waktu_mulai', $date)
+            ->orderBy('waktu_mulai', 'asc')
+            ->get();
 
-        // Agregasi data untuk grafik (total pendapatan per jam)
+        // 1. Total Pendapatan
+        $totalPendapatan = $penyewaans->sum('total_bayar');
+
+        // 2. Distribusi Cash vs QRIS
+        $qrisTotal = $penyewaans->where('is_qris', true)->sum('total_bayar');
+        $cashTotal = $penyewaans->where('is_qris', false)->sum('total_bayar');
+
+        $paymentMethodDistribution = [];
+        if ($cashTotal > 0) {
+            $paymentMethodDistribution[] = ['label' => 'Cash', 'value' => $cashTotal];
+        }
+        if ($qrisTotal > 0) {
+            $paymentMethodDistribution[] = ['label' => 'QRIS', 'value' => $qrisTotal];
+        }
+        if (empty($paymentMethodDistribution)) {
+            $paymentMethodDistribution[] = ['label' => 'Tidak Ada Data', 'value' => 1];
+        }
+
+        // 3. Pendapatan per meja
+        $pendapatanPerMeja = $penyewaans->groupBy('meja_id')->map(function ($items, $mejaId) {
+            $namaMeja = $items->first()->meja->nama_meja ?? 'Meja ' . $mejaId;
+            return [
+                'meja_id' => $mejaId,
+                'nama_meja' => $namaMeja,
+                'total_pendapatan' => $items->sum('total_bayar'),
+            ];
+        })->sortByDesc('total_pendapatan')->values();
+
+        // 4. Chart pendapatan per jam
         $dailyRevenue = Penyewaan::select(
-                                DB::raw('HOUR(waktu_mulai) as hour'),
-                                DB::raw('SUM(total_bayar) as total')
-                            )
-                            ->whereDate('waktu_mulai', $date)
-                            ->groupBy('hour')
-                            ->orderBy('hour', 'asc')
-                            ->get();
+            DB::raw('HOUR(waktu_mulai) as hour'),
+            DB::raw('SUM(total_bayar) as total')
+        )
+        ->whereDate('waktu_mulai', $date)
+        ->groupBy('hour')
+        ->orderBy('hour', 'asc')
+        ->get();
 
         $chartLabels = [];
         $chartData = [];
-
-        // Inisialisasi label dan data untuk semua jam dalam sehari (0-23)
         for ($i = 0; $i < 24; $i++) {
-            $chartLabels[] = sprintf('%02d:00', $i); // Format jam: 00:00, 01:00, dst.
-            $chartData[$i] = 0; // Default ke 0 jika tidak ada penjualan di jam tersebut
+            $chartLabels[] = sprintf('%02d:00', $i);
+            $chartData[$i] = 0;
         }
-
         foreach ($dailyRevenue as $data) {
             $chartData[$data->hour] = $data->total;
         }
+        $chartData = array_values($chartData);
 
-        $chartData = array_values($chartData); // Reset keys untuk array JavaScript
+        // 5. Header tabel
+        $headers = [
+            'ID', 'Nama Penyewa', 'Meja', 'Durasi (Jam)', 'Harga/Jam',
+            'Total Layanan', 'Total Bayar', 'Waktu Mulai',
+            'Waktu Selesai', 'Status', 'Metode Bayar'
+        ];
 
-        return view('laporan.harian', compact('penyewaans', 'chartLabels', 'chartData', 'date'));
+        return view('laporan.harian', compact(
+            'penyewaans',
+            'totalPendapatan',
+            'paymentMethodDistribution',
+            'pendapatanPerMeja',
+            'chartLabels',
+            'chartData',
+            'date',
+            'headers'
+        ));
     }
+
 
     /**
      * Menampilkan laporan bulanan data penyewaan.

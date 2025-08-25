@@ -12,7 +12,7 @@ class Penyewaan extends Model
     protected $fillable = [
         'meja_id', 'nama_penyewa', 'durasi_jam', 'harga_per_jam',
         'kode_kupon', 'diskon_persen', 'total_service', 'service_detail',
-        'total_bayar', 'waktu_mulai', 'waktu_selesai', 'status', 'kasir_id',
+        'total_bayar', 'waktu_mulai', 'waktu_selesai', 'status', 'no_telp', 'kasir_id',
         'paket_id', 'pemandu_id', 'is_qris',// Tambahkan ini
     ];
 

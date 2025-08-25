@@ -26,69 +26,75 @@ class KasirController extends Controller
     }
 
     public function pesanDurasi(Request $request)
-    {
-        $request->validate([
-            'meja_id' => 'required|exists:mejas,id',
-            'nama_penyewa' => 'required|string|max:255',
-            'durasi_jam' => 'required|numeric|min:0.01',
-        ]);
+{
+    $request->validate([
+        'meja_id'      => 'required|exists:mejas,id',
+        'nama_penyewa' => 'required|string|max:255',
+        'durasi_jam'   => 'required|numeric|min:0.01',
+        'no_telp'      => 'nullable|string|max:20',
+        'is_member'    => 'nullable', // checkbox
+    ]);
 
-        $hargaSetting = HargaSetting::latest()->first();
-        $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
+    $hargaSetting = HargaSetting::latest()->first();
+    $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
 
-        Penyewaan::create([
-            'meja_id'         => $request->meja_id,
-            'nama_penyewa'    => $request->nama_penyewa,
-            'durasi_jam'      => $request->durasi_jam,
-            'harga_per_jam'   => $hargaPerJam, // Ini akan menjadi harga per jam standar
-            'kode_kupon'      => null,
-            'diskon_persen'   => null,
-            'total_service'   => 0,
-            'service_detail'  => '[]',
-            'total_bayar'     => null,
-            'waktu_mulai'     => now(),
-            'waktu_selesai'   => now()->addMinutes($request->durasi_jam * 60),
-            'status'          => 'berlangsung',
-            'kasir_id'        => Auth::id(),
-            // 'paket_id' => null, // Tambahkan kolom ini jika ada di DB
-        ]);
+    Penyewaan::create([
+        'meja_id'       => $request->meja_id,
+        'nama_penyewa'  => $request->nama_penyewa,
+        'no_telp'       => $request->is_member ? $request->no_telp : null,
+        'durasi_jam'    => $request->durasi_jam,
+        'harga_per_jam' => $hargaPerJam,
+        'kode_kupon'    => null,
+        'diskon_persen' => null,
+        'total_service' => 0,
+        'service_detail'=> '[]',
+        'total_bayar'   => null,
+        'waktu_mulai'   => now(),
+        'waktu_selesai' => now()->addMinutes($request->durasi_jam * 60),
+        'status'        => 'berlangsung',
+        'kasir_id'      => Auth::id(),
+    ]);
 
-        Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
+    Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
 
-        return redirect()->route('dashboard.kasir')->with('success', 'Penyewaan durasi tetap dimulai pada .');
-    }
+    return redirect()->route('dashboard.kasir')->with('success', 'Penyewaan durasi tetap dimulai!');
+}
 
-    public function pesanSepuasnya(Request $request)
-    {
-        $request->validate([
-            'meja_id' => 'required|exists:mejas,id',
-            'nama_penyewa' => 'required|string|max:255',
-        ]);
+public function pesanSepuasnya(Request $request)
+{
+    $request->validate([
+        'meja_id'      => 'required|exists:mejas,id',
+        'nama_penyewa' => 'required|string|max:255',
+        'no_telp'      => 'nullable|string|max:20',
+        'is_member'    => 'nullable',
+    ]);
 
-        $hargaSetting = HargaSetting::latest()->first();
-        $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
+    $hargaSetting = HargaSetting::latest()->first();
+    $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
 
-        Penyewaan::create([
-            'meja_id'         => $request->meja_id,
-            'nama_penyewa'    => $request->nama_penyewa,
-            'durasi_jam'      => 0,
-            'harga_per_jam'   => $hargaPerJam, // Ini akan menjadi harga per jam standar
-            'kode_kupon'      => null,
-            'diskon_persen'   => null,
-            'total_service'   => 0,
-            'service_detail'  => '[]',
-            'total_bayar'     => null,
-            'waktu_mulai'     => now(),
-            'waktu_selesai'   => null,
-            'status'          => 'berlangsung',
-            'kasir_id'        => Auth::id(),
-            'paket_id' => null, // Tambahkan kolom ini jika ada di DB
-        ]);
+    Penyewaan::create([
+        'meja_id'       => $request->meja_id,
+        'nama_penyewa'  => $request->nama_penyewa,
+        'no_telp'       => $request->is_member ? $request->no_telp : null,
+        'durasi_jam'    => 0,
+        'harga_per_jam' => $hargaPerJam,
+        'kode_kupon'    => null,
+        'diskon_persen' => null,
+        'total_service' => 0,
+        'service_detail'=> '[]',
+        'total_bayar'   => null,
+        'waktu_mulai'   => now(),
+        'waktu_selesai' => null,
+        'status'        => 'berlangsung',
+        'kasir_id'      => Auth::id(),
+        'paket_id'      => null,
+    ]);
 
-        Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
+    Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
 
-        return redirect()->route('dashboard.kasir')->with('success', 'Penyewaan "Main Sepuasnya" dimulai pada {$meja->nama_meja}.');
-    }
+    return redirect()->route('dashboard.kasir')->with('success', 'Penyewaan "Main Sepuasnya" dimulai!');
+}
+
 
     /**
      * NEW: Handle package booking.
@@ -196,30 +202,42 @@ class KasirController extends Controller
 
 
     public function getPenyewaanAktifJson()
-    {
-        $penyewaan = Penyewaan::with('meja')
-            ->where('status', 'berlangsung')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'meja_id' => (int)$item->meja_id,
-                    'nama_penyewa' => $item->nama_penyewa,
-                    'waktu_mulai' => $item->waktu_mulai->toIso8601String(),
-                    'waktu_selesai' => $item->waktu_selesai ? $item->waktu_selesai->toIso8601String() : null,
-                    'durasi_jam' => (float)$item->durasi_jam,
-                    'meja_nama' => $item->meja->nama_meja,
-                    'status' => $item->status,
-                    'harga_per_jam' => (float)$item->harga_per_jam,
-                    'total_service' => (float)$item->total_service,
-                    'service_detail' => json_decode($item->service_detail, true),
-                    'is_sepuasnya' => is_null($item->waktu_selesai),
-                    'paket_id' => $item->paket_id, // Jika ada kolom ini di DB
-                ];
-            });
+{
+    $penyewaan = Penyewaan::with('meja')
+        ->where('status', 'berlangsung')
+        ->get()
+        ->map(function ($item) {
+            // Cek apakah no_telp ada di tabel member
+            $isMember = \App\Models\Member::where('no_telp', $item->no_telp)->exists();
 
-        return response()->json($penyewaan);
-    }
+            // Hitung diskon kalau member
+            $diskonPersen = $isMember ? 10 : 0; // misal 10% diskon
+            $totalService = (float)$item->total_service;
+            $totalSetelahDiskon = $totalService - ($totalService * $diskonPersen / 100);
+
+            return [
+                'id' => $item->id,
+                'meja_id' => (int)$item->meja_id,
+                'nama_penyewa' => $item->nama_penyewa,
+                'waktu_mulai' => $item->waktu_mulai->toIso8601String(),
+                'waktu_selesai' => $item->waktu_selesai ? $item->waktu_selesai->toIso8601String() : null,
+                'durasi_jam' => (float)$item->durasi_jam,
+                'meja_nama' => $item->meja->nama_meja,
+                'status' => $item->status,
+                'harga_per_jam' => (float)$item->harga_per_jam,
+                'total_service' => $totalService,
+                'total_setelah_diskon' => $totalSetelahDiskon,
+                'diskon_persen' => $diskonPersen,
+                'service_detail' => json_decode($item->service_detail, true),
+                'is_sepuasnya' => is_null($item->waktu_selesai),
+                'paket_id' => $item->paket_id,
+                'is_member' => $isMember, // buat info aja
+            ];
+        });
+
+    return response()->json($penyewaan);
+}
+
 
     public function addDuration(Request $request, Penyewaan $penyewaan)
     {

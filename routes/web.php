@@ -12,6 +12,10 @@ use App\Http\Controllers\KuponController;
 use App\Http\Controllers\PaketController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PemanduController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\ProfileController;
+
+Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [LoginController::class, 'index'])->name('landing');
@@ -108,6 +112,12 @@ Route::middleware('role:pemandu')->group(function () {
     Route::get('/api/services', [ServiceController::class, 'getServicesJson'])->name('api.services'); // Reuse existing API
     Route::get('/api/pakets', [PaketController::class, 'getPaketsJson'])->name('api.pakets');     // Reuse existing API
     
+// Member
+Route::resource('members', MemberController::class);
+Route::get('/cek-member', [MemberController::class, 'cekMember']);
+
+// Laporan
 Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('laporan.harian');
 Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
+
 });

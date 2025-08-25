@@ -14,6 +14,7 @@
         @foreach ($mejas as $meja)
         <div id="meja-card-{{ $meja->id }}" class="p-4 border rounded shadow @if($meja->status === 'dipakai') bg-red-100 @else bg-green-100 @endif">
             <h2 class="text-lg font-semibold">{{ $meja->nama_meja }}</h2>
+            <img src="{{ asset('images/meja.png') }}" alt="Logo" width="200">
             <p id="status-meja-{{ $meja->id }}">Status: {{ $meja->status }}</p>
 
             @if ($meja->status === 'kosong')
@@ -32,11 +33,31 @@
         <form id="formPesan" method="POST">
             @csrf
             <input type="hidden" name="meja_id" id="modal_meja_id">
+
+            <!-- Nama Penyewa -->
             <div class="mb-3">
                 <label for="nama_penyewa" class="form-label">Nama Penyewa</label>
                 <input type="text" name="nama_penyewa" id="nama_penyewa" required class="form-input">
             </div>
 
+            <!-- Checkbox Member -->
+            <div class="mb-3">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" id="is_member" name="is_member" class="form-checkbox h-5 w-5 text-blue-600">
+                    <span class="ml-2 text-gray-700">Member</span>
+                </label>
+            </div>
+
+            <!-- No. Telp (hanya muncul kalau member dicentang) -->
+            <div class="mb-3" id="no_telp_wrapper" style="display:none;">
+                <label for="no_telp" class="form-label">No. Telepon</label>
+                <input type="text" name="no_telp" id="no_telp" class="form-input" placeholder="Masukkan nomor telepon">
+                <p id="diskon_info" class="text-green-600 text-sm mt-1" style="display:none;">
+                    Anda mendapatkan potongan 5%!
+                </p>
+            </div>
+
+            <!-- Pilih Paket -->
             <div class="mb-3">
                 <label for="paket_id_select" class="form-label">Pilih Paket (Opsional)</label>
                 <select name="paket_id" id="paket_id_select" class="form-input">
@@ -46,6 +67,7 @@
                 <p id="paket_deskripsi_preview" class="text-gray-400 text-xs mt-1 italic" style="display:none;"></p>
             </div>
 
+            <!-- Non Paket Options -->
             <div id="non_paket_options">
                 <div class="mb-3">
                     <label class="inline-flex items-center">
@@ -59,6 +81,7 @@
                 </div>
             </div>
 
+            <!-- Buttons -->
             <div class="modal-footer">
                 <button type="button" onclick="closeModal()" class="btn btn-secondary">Batal</button>
                 <button type="submit" class="btn btn-primary">Mulai</button>
@@ -121,6 +144,7 @@
         <form id="formPembayaran">
             @csrf
             <input type="hidden" name="penyewaan_id" id="payment_penyewaan_id">
+            
             <p>Meja: <strong id="payment_meja_nama"></strong></p>
             <p>Penyewa: <strong id="payment_nama_penyewa"></strong></p>
             <p>Durasi Booking: <strong id="payment_durasi"></strong></p>
@@ -138,16 +162,28 @@
                 <input type="text" name="kode_kupon" id="kode_kupon" class="form-input">
                 <small class="text-gray-500">Biarkan kosong jika tidak ada kupon.</small>
             </div>
-            <p class="text-lg font-bold">Diskon: <strong id="payment_diskon" class="text-red-500"></strong></p>
-            <p class="text-xl font-bold">Total Pembayaran: <strong id="payment_total_final" class="text-green-600"></strong></p>
+
+            <!-- Diskon Member dan Kupon -->
+            <p class="text-lg font-bold">
+                Diskon: 
+                <strong id="payment_diskon" class="text-red-500">-</strong>
+            </p>
+
+            <!-- Total akhir setelah diskon -->
+            <p class="text-xl font-bold">
+                Total Pembayaran: 
+                <strong id="payment_total_final" class="text-green-600">-</strong>
+            </p>
+
             <div class="modal-footer">
                 <button type="button" onclick="closePaymentModal()" class="btn btn-secondary">Batal</button>
                 <button type="submit" class="btn btn-primary">Bayar Sekarang</button>
-                 <button type="button" id="btn-pay-qris" onclick="handleQrisPayment()" class="btn bg-blue-500 hover:bg-blue-600 text-white">Bayar dengan QRIS</button>
+                <button type="button" id="btn-pay-qris" onclick="handleQrisPayment()" class="btn bg-blue-500 hover:bg-blue-600 text-white">Bayar dengan QRIS</button>
             </div>
         </form>
     </div>
 </div>
+
 
 <style>
     /* Basic Modal Styles */
@@ -442,51 +478,98 @@
         } catch (error) { console.error('Error fetching and rendering mejas:', error); }
     };
 
+    
     const fetchPaymentDetails = async (penyewaanId) => {
-        const p=currentActiveRentals[penyewaanId]; if (!p) { alert('Detail penyewaan tidak ditemukan.'); closePaymentModal(); return; }
+    const p = currentActiveRentals[penyewaanId];
+    if (!p) { 
+        alert('Detail penyewaan tidak ditemukan.'); 
+        closePaymentModal(); 
+        return; 
+    }
 
-        const hargaPerJam = parseFloat(p.harga_per_jam || 0); let durasiUntukPerhitungan = parseFloat(p.durasi_jam || 0);
-        const initialTotalService = parseFloat(p.total_service || 0); const serviceDetails = p.service_detail;
+    const hargaPerJam = parseFloat(p.harga_per_jam || 0);
+    let durasiUntukPerhitungan = parseFloat(p.durasi_jam || 0);
+    const initialTotalService = parseFloat(p.total_service || 0);
+    const serviceDetails = p.service_detail || [];
 
-        let waktuSelesaiAktual = getCalibratedNow();
-        if (p.is_sepuasnya) { durasiUntukPerhitungan = (waktuSelesaiAktual.getTime() - new Date(p.waktu_mulai).getTime()) / (1000 * 60 * 60); }
+    let waktuSelesaiAktual = getCalibratedNow();
+    if (p.is_sepuasnya) {
+        durasiUntukPerhitungan = (waktuSelesaiAktual.getTime() - new Date(p.waktu_mulai).getTime()) / (1000 * 60 * 60);
+    }
 
-        const updateTotalDisplay = (diskonPersen = 0) => {
-            const subtotalMain = durasiUntukPerhitungan * hargaPerJam;
-            const totalBeforeDiscount = subtotalMain + initialTotalService;
-            const currentDiskon = (totalBeforeDiscount * diskonPersen) / 100;
-            const finalTotal = totalBeforeDiscount - currentDiskon;
+    const updateTotalDisplay = (diskonKupon = 0, diskonMember = 0) => {
+        const subtotalMain = durasiUntukPerhitungan * hargaPerJam;
+        const totalBeforeDiscount = subtotalMain + initialTotalService;
+        const totalDiskon = diskonKupon + diskonMember;
+        const finalTotal = totalBeforeDiscount - totalDiskon;
 
-            getEl('payment_subtotal_main').innerText = fmtRp(subtotalMain); getEl('payment_total_service').innerText = fmtRp(initialTotalService);
-            getEl('payment_diskon').innerText = fmtRp(currentDiskon); getEl('payment_total_final').innerText = fmtRp(finalTotal);
-        };
-
-        getEl('payment_meja_nama').innerText = p.meja_nama; getEl('payment_nama_penyewa').innerText = p.nama_penyewa;
-        getEl('payment_durasi').innerText = p.is_sepuasnya ? 'N/A (Main Sepuasnya)' : fmtDur(p.durasi_jam);
-        getEl('payment_mode_sepuasnya_info').style.display = p.is_sepuasnya ? 'block' : 'none';
-        getEl('payment_waktu_mulai').innerText = fmtFullDt(p.waktu_mulai);
-        getEl('payment_waktu_selesai_terjadwal').innerText = p.waktu_selesai ? fmtFullDt(p.waktu_selesai) : 'N/A';
-        getEl('payment_waktu_selesai_aktual').innerText = fmtFullDt(waktuSelesaiAktual);
-        getEl('payment_harga_per_jam').innerText = fmtRp(hargaPerJam);
-
-        const serviceDetailListEl = getEl('payment_service_detail'); serviceDetailListEl.innerHTML = '';
-        if (serviceDetails && serviceDetails.length > 0) {
-            serviceDetails.forEach(s => { const li = document.createElement('li'); li.innerText = `${s.nama} (${s.jumlah}x) - ${fmtRp(s.subtotal)}`; serviceDetailListEl.appendChild(li); });
-        } else { const li = document.createElement('li'); li.innerText = 'Tidak ada layanan tambahan.'; serviceDetailListEl.appendChild(li); }
-        updateTotalDisplay();
-
-        getEl('kode_kupon').oninput = debounce(async function() {
-            const kuponCode = this.value.trim(); let diskonPersen = 0;
-            if (kuponCode) {
-                try {
-                    const res = await fetch(`{{ route('api.kupon.validate') }}?code=${encodeURIComponent(kuponCode)}`);
-                    if (res.ok) { const data = await res.json(); diskonPersen = parseFloat(data.diskon_persen) || 0; alert(`Kupon "${kuponCode}" berhasil diterapkan! Diskon ${diskonPersen}%`); }
-                    else { const errData = await res.json(); alert('Kupon tidak valid: ' + (errData.message || 'Kode kupon tidak ditemukan atau kadaluarsa.')); }
-                } catch (e) { alert('Error saat memvalidasi kupon. Silakan cek koneksi atau rute API Kupon.'); console.error('Error validating kupon:', e); }
-            }
-            updateTotalDisplay(diskonPersen);
-        }, 500);
+        getEl('payment_subtotal_main').innerText = fmtRp(subtotalMain);
+        getEl('payment_total_service').innerText = fmtRp(initialTotalService);
+        getEl('payment_diskon').innerText = fmtRp(totalDiskon);
+        getEl('payment_total_final').innerText = fmtRp(finalTotal);
     };
+
+    // Set detail modal
+    getEl('payment_meja_nama').innerText = p.meja_nama;
+    getEl('payment_nama_penyewa').innerText = p.nama_penyewa;
+    getEl('payment_durasi').innerText = p.is_sepuasnya ? 'N/A (Main Sepuasnya)' : fmtDur(p.durasi_jam);
+    getEl('payment_mode_sepuasnya_info').style.display = p.is_sepuasnya ? 'block' : 'none';
+    getEl('payment_waktu_mulai').innerText = fmtFullDt(p.waktu_mulai);
+    getEl('payment_waktu_selesai_terjadwal').innerText = p.waktu_selesai ? fmtFullDt(p.waktu_selesai) : 'N/A';
+    getEl('payment_waktu_selesai_aktual').innerText = fmtFullDt(waktuSelesaiAktual);
+    getEl('payment_harga_per_jam').innerText = fmtRp(hargaPerJam);
+
+    // List service
+    const serviceDetailListEl = getEl('payment_service_detail');
+    serviceDetailListEl.innerHTML = '';
+    if(serviceDetails.length > 0) {
+        serviceDetails.forEach(s => {
+            const li = document.createElement('li');
+            li.innerText = `${s.nama} (${s.jumlah}x) - ${fmtRp(s.subtotal)}`;
+            serviceDetailListEl.appendChild(li);
+        });
+    } else {
+        serviceDetailListEl.innerHTML = '<li>Tidak ada layanan tambahan.</li>';
+    }
+
+    // --- DISKON MEMBER LANGSUNG DARI DATA JSON ---
+    let diskonMember = 0;
+    if (p.is_member) {
+        diskonMember = (durasiUntukPerhitungan * hargaPerJam + initialTotalService) * 0.05; // contoh 5%
+        document.getElementById('diskon_info').style.display = 'block';
+    } else {
+        document.getElementById('diskon_info').style.display = 'none';
+    }
+
+    // Kupon input
+    let currentKuponDiskon = 0;
+    getEl('kode_kupon').oninput = debounce(async function() {
+        const kuponCode = this.value.trim();
+        currentKuponDiskon = 0;
+        if(kuponCode) {
+            try {
+                const res = await fetch(`{{ route('api.kupon.validate') }}?code=${encodeURIComponent(kuponCode)}`);
+                if(res.ok) {
+                    const data = await res.json();
+                    currentKuponDiskon = (durasiUntukPerhitungan * hargaPerJam + initialTotalService) * (parseFloat(data.diskon_persen)/100 || 0);
+                    alert(`Kupon "${kuponCode}" berhasil diterapkan! Diskon ${data.diskon_persen}%`);
+                } else {
+                    const errData = await res.json();
+                    alert('Kupon tidak valid: ' + (errData.message || 'Kode kupon tidak ditemukan atau kadaluarsa.'));
+                }
+            } catch(e) {
+                console.error('Error validating kupon:', e);
+            }
+        }
+        updateTotalDisplay(currentKuponDiskon, diskonMember);
+    }, 500);
+
+    // Update total awal
+    updateTotalDisplay(0, diskonMember);
+};
+
+
+
 
     const fetchAndRenderServicesForAdd = async () => {
         try {
@@ -751,5 +834,12 @@ const handleQrisPayment = async () => {
         setInterval(fetchAndRenderMejas, 5000);
     });
 
+</script>
+
+<script>
+    document.getElementById('is_member').addEventListener('change', function () {
+        let wrapper = document.getElementById('no_telp_wrapper');
+        wrapper.style.display = this.checked ? 'block' : 'none';
+    });
 </script>
 @endsection

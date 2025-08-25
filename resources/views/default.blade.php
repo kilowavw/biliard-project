@@ -150,6 +150,13 @@
                     <i class="fa-solid fa-box-open mr-3"></i> Paket
                 </a>
 
+                {{-- Member --}}
+                <a href="{{ route('members.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('members.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-users mr-3"></i> Member
+                </a>
+
+
                 {{-- Pengaturan Harga Menu --}}
                 @if(auth()->user()->role == 'admin' || auth()->user()->role == 'bos')
                 <a href="{{ route('admin.harga_settings.index') }}" class="flex items-center px-4 py-2 rounded

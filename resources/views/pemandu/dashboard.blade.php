@@ -36,11 +36,31 @@
         <form id="formPesan" method="POST">
             @csrf
             <input type="hidden" name="meja_id" id="modal_meja_id">
+
+            <!-- Nama Penyewa -->
             <div class="mb-3">
                 <label for="nama_penyewa" class="form-label">Nama Penyewa</label>
                 <input type="text" name="nama_penyewa" id="nama_penyewa" required class="form-input">
             </div>
 
+            <!-- Checkbox Member -->
+            <div class="mb-3">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" id="is_member" name="is_member" class="form-checkbox h-5 w-5 text-blue-600">
+                    <span class="ml-2 text-gray-700">Member</span>
+                </label>
+            </div>
+
+            <!-- No. Telp (hanya muncul kalau member dicentang) -->
+            <div class="mb-3" id="no_telp_wrapper" style="display:none;">
+                <label for="no_telp" class="form-label">No. Telepon</label>
+                <input type="text" name="no_telp" id="no_telp" class="form-input" placeholder="Masukkan nomor telepon">
+                <p id="diskon_info" class="text-green-600 text-sm mt-1" style="display:none;">
+                    Anda mendapatkan potongan 5%!
+                </p>
+            </div>
+
+            <!-- Pilih Paket -->
             <div class="mb-3">
                 <label for="paket_id_select" class="form-label">Pilih Paket (Opsional)</label>
                 <select name="paket_id" id="paket_id_select" class="form-input">
@@ -50,6 +70,7 @@
                 <p id="paket_deskripsi_preview" class="text-gray-400 text-xs mt-1 italic" style="display:none;"></p>
             </div>
 
+            <!-- Non Paket Options -->
             <div id="non_paket_options">
                 <div class="mb-3">
                     <label class="inline-flex items-center">
@@ -63,8 +84,9 @@
                 </div>
             </div>
 
+            <!-- Buttons -->
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Batal</button>
+                <button type="button" onclick="closeModal()" class="btn btn-secondary">Batal</button>
                 <button type="submit" class="btn btn-primary">Mulai</button>
             </div>
         </form>
