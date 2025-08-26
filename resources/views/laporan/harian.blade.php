@@ -6,19 +6,21 @@
 
 <?php
 // Variabel PHP sudah disediakan dari controller:
-// $date, $totalPendapatan, $paymentMethodDistribution, $pendapatanPerMeja, $penyewaansPaginated
+// $date, $totalPendapatanNett, $paymentMethodDistribution, $pendapatanPerMeja,
+// $topKasir, $topPemandu, $penyewaansPaginated (ini sudah gabungan Penyewaan & ServiceTransaction)
+// $TOP_PERFORMERS_LIMIT (dari konstanta controller)
 
 $headers = [
-    'ID', 'Nama Penyewa', 'Meja', 'Durasi (Jam)', 'Harga/Jam',
-    'Total Layanan', 'Total Bayar', 'Waktu Mulai', 'Waktu Selesai', 'Status', 'Metode Bayar'
+    'Tipe', 'ID', 'Nama', 'Meja/Layanan', 'Durasi/Qty','Harga Jam', 'Diskon', 'Total Bayar',
+    'Waktu Mulai/Transaksi', 'Waktu Selesai', 'Status', 'Metode Bayar', 'Kasir', 'Pemandu'
 ];
 ?>
 
 <div class="container mx-auto p-4 md:p-6 bg-[#121212] text-white min-h-screen">
-    <h1 class="text-3xl font-bold mb-6 text-white">Laporan Harian Penyewaan</h1>
+    <h1 class="text-3xl font-bold mb-6 text-white">Laporan Harian Penyewaan & Layanan</h1>
 
     <form id="date-form" action="{{ route('laporan.harian') }}" method="GET" class="mb-6 flex flex-col md:flex-row items-center gap-4">
-        {{-- Link untuk laporan harian --}}
+    {{-- Link untuk laporan harian --}}
         <a href="{{ route('laporan.harian') }}" class="flex items-center px-4 py-2 rounded
                     {{ request()->routeIs('laporan.harian') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-calendar-day mr-3"></i> Laporan Harian
@@ -53,7 +55,7 @@ $headers = [
         <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md flex items-center justify-between border border-gray-700">
             <div>
                 <p class="text-sm font-medium text-gray-400">Total Pendapatan (Nett) {{ date('d F Y', strtotime($date)) }}</p>
-                <p id="total-pendapatan" class="text-3xl font-bold text-white mt-1">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>
+                <p id="total-pendapatan" class="text-3xl font-bold text-white mt-1">Rp {{ number_format($totalPendapatanNett, 0, ',', '.') }}</p>
             </div>
             <div class="p-3 bg-blue-900 rounded-full">
                 <i class="fa-solid fa-rupiah-sign text-blue-300 text-2xl"></i>
@@ -69,10 +71,53 @@ $headers = [
                 <canvas id="paymentMethodChart"></canvas>
             </div>
             <p class="text-sm text-gray-400 mt-4 italic">
-                *Data distribusi Cash & QRIS diambil dari kolom 'is_qris'.
+                *Data distribusi Cash & QRIS diambil dari kedua jenis transaksi.
             </p>
         </div>
-        {{-- Jika Anda ingin menambahkan grafik tren per jam di sini, tempatkan ApexCharts seperti contoh lainnya --}}
+
+        {{-- Grafik Kinerja Kasir (ApexCharts Horizontal Bar) --}}
+        <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md border border-gray-700">
+            <h2 class="text-xl font-semibold mb-4 text-white">Kinerja Kasir {{ date('d F Y', strtotime($date)) }}</h2>
+            <div id="kasir-chart"></div>
+            <p class="text-sm text-gray-400 mt-4 italic">
+                *Top {{ $TOP_PERFORMERS_LIMIT }} kasir berdasarkan total pendapatan.
+            </p>
+        </div>
+    </div>
+
+    {{-- Daftar Card Pendapatan Per Kasir --}}
+    <h2 class="text-xl font-semibold mb-4 text-white">Pendapatan Per Kasir {{ date('d F Y', strtotime($date)) }}</h2>
+    <div id="pendapatan-kasir-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
+        @forelse ($topKasir as $name => $revenue)
+            <div class="bg-[#1e1e1e] p-4 rounded-lg shadow-md border border-gray-700 hover:bg-[#232323] transition-colors duration-200">
+                <h3 class="text-lg font-semibold text-white">{{ $name }}</h3>
+                <p class="text-xl font-bold text-green-400 mt-2">Rp {{ number_format($revenue, 0, ',', '.') }}</p>
+            </div>
+        @empty
+            <p class="text-gray-400 col-span-full">Tidak ada pendapatan tercatat untuk kasir pada periode ini.</p>
+        @endforelse
+    </div>
+
+    {{-- Grafik Kinerja Pemandu (ApexCharts Horizontal Bar) --}}
+    <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md border border-gray-700 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-white">Kinerja Pemandu {{ date('d F Y', strtotime($date)) }}</h2>
+        <div id="pemandu-chart"></div>
+        <p class="text-sm text-gray-400 mt-4 italic">
+            *Top {{ $TOP_PERFORMERS_LIMIT }} pemandu berdasarkan jumlah meja yang dilayani.
+        </p>
+    </div>
+
+    {{-- Daftar Card Jumlah Meja Per Pemandu --}}
+    <h2 class="text-xl font-semibold mb-4 text-white">Jumlah Meja Per Pemandu {{ date('d F Y', strtotime($date)) }}</h2>
+    <div id="pendapatan-pemandu-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
+        @forelse ($topPemandu as $name => $count)
+            <div class="bg-[#1e1e1e] p-4 rounded-lg shadow-md border border-gray-700 hover:bg-[#232323] transition-colors duration-200">
+                <h3 class="text-lg font-semibold text-white">{{ $name }}</h3>
+                <p class="text-xl font-bold text-indigo-400 mt-2">{{ number_format($count, 0, ',', '.') }} Meja</p>
+            </div>
+        @empty
+            <p class="text-gray-400 col-span-full">Tidak ada meja tercatat untuk pemandu pada periode ini.</p>
+        @endforelse
     </div>
 
     <h2 class="text-xl font-semibold mb-4 text-white">Pendapatan Per Meja {{ date('d F Y', strtotime($date)) }}</h2>
@@ -87,34 +132,42 @@ $headers = [
         @endforelse
     </div>
 
-    <h2 class="text-xl font-semibold mb-4 text-white">Detail Penyewaan {{ date('d F Y', strtotime($date)) }}</h2>
+    <h2 class="text-xl font-semibold mb-4 text-white">Detail Transaksi {{ date('d F Y', strtotime($date)) }}</h2>
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-700 ">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-700 text-white">
                 <tr>
                     @foreach($headers as $header)
-                        <th scope="col" class="px-6 py-3 text-white">{{ $header }}</th>
+                        <th scope="col" class="px-6 py-3">{{ $header }}</th>
                     @endforeach
                 </tr>
             </thead>
             <tbody>
-                @forelse($penyewaansPaginated as $penyewaan) {{-- Gunakan data yang sudah di-paginate --}}
+                @forelse($penyewaansPaginated as $item) {{-- $item bisa Penyewaan atau ServiceTransaction --}}
                     <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
-                        <td class="px-6 py-4">{{ $penyewaan->id }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->nama_penyewa }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->meja->nama_meja ?? $penyewaan->meja_id }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->durasi_jam }}</td>
-                        <td class="px-6 py-4">{{ number_format($penyewaan->harga_per_jam, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ number_format($penyewaan->total_service, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ number_format($penyewaan->total_bayar, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->waktu_mulai->format('H:i:s') }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->waktu_selesai ? $penyewaan->waktu_selesai->format('H:i:s') : '-' }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->status }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->is_qris ? 'QRIS' : 'Cash' }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                {{ $item->type == 'Penyewaan' ? 'bg-blue-600 text-blue-100' : 'bg-purple-600 text-purple-100' }}">
+                                {{ $item->type }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">{{ $item->id }}</td>
+                        <td class="px-6 py-4">{{ $item->nama_penyewa ?? $item->customer_name }}</td>
+                        <td class="px-6 py-4">{{ $item->meja->nama_meja ?? ($item->service_detail ? 'Layanan Lain' : '-') }}</td>
+                        <td class="px-6 py-4">{{ $item->durasi_jam ?? ($item->service_detail ? count($item->service_detail) . ' item' : '-') }}</td>
+                        <td class="px-6 py-4">{{ number_format($item->harga_per_jam ?? ($item->service_detail ? collect($item->service_detail)->sum('subtotal') / count($item->service_detail) : 0), 0, ',', '.') }}</td>
+                        <td class="px-6 py-4">{{ number_format($item->diskon_amount ?? ($item->diskon_persen ? ($item->diskon_persen/100 * $item->total_bayar) : 0), 0, ',', '.') }} ({{ $item->diskon_persen ?? 0 }}%)</td>
+                        <td class="px-6 py-4">{{ number_format($item->total_bayar, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4">{{ ($item->waktu_mulai ?? $item->transaction_time)->format('d/m/Y H:i:s') }}</td>
+                        <td class="px-6 py-4">{{ $item->waktu_selesai ? $item->waktu_selesai->format('d/m/Y H:i:s') : '-' }}</td>
+                        <td class="px-6 py-4">{{ $item->status ?? $item->payment_status }}</td>
+                        <td class="px-6 py-4">{{ $item->is_qris ? 'QRIS' : ($item->payment_method ?? 'Cash') }}</td>
+                        <td class="px-6 py-4">{{ $item->kasir->name ?? '-' }}</td>
+                        <td class="px-6 py-4">{{ $item->pemandu->name ?? '-' }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada data penyewaan untuk tanggal ini.</td>
+                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada data transaksi untuk tanggal ini.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -132,8 +185,8 @@ $headers = [
 @section('script')
 {{-- Chart.js untuk Doughnut Chart --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{{-- ApexCharts jika Anda ingin menambahkan grafik tren harian per jam --}}
-{{-- <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script> --}}
+{{-- ApexCharts untuk Bar Charts --}}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script>
 
 <script>
     const fmtRp = (amount) => {
@@ -144,6 +197,7 @@ $headers = [
         }).format(amount);
     };
 
+    // --- Script untuk Chart.js (Doughnut Chart: Distribusi Pembayaran) ---
     let paymentMethodChartInstance = null;
     const paymentMethodDistributionData = @json($paymentMethodDistribution);
 
@@ -162,7 +216,7 @@ $headers = [
                 labels: labels,
                 datasets: [{
                     data: values,
-                    backgroundColor: ['#10B981', '#3B82F6', '#6B7280'], // Hijau, Biru, Abu-abu
+                    backgroundColor: ['#10B981', '#3B82F6', '#6B7280'],
                     hoverOffset: 4
                 }]
             },
@@ -172,9 +226,16 @@ $headers = [
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { color: '#D1D5DB' } // Warna teks legend
+                        labels: { color: '#D1D5DB' }
                     },
                     tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: '#333333', // Dark background for tooltip
+                        titleColor: '#FFFFFF',     // White title color
+                        bodyColor: '#D1D5DB',      // Light gray body color
+                        borderColor: '#4A4A4A',    // Border color
+                        borderWidth: 1,
                         callbacks: {
                             label: function(context) {
                                 let label = context.label || '';
@@ -194,8 +255,117 @@ $headers = [
         });
     };
 
+    // --- Script untuk ApexCharts (Horizontal Bar Chart: Kinerja Kasir) ---
+    const topKasirData = @json($topKasir);
+    const kasirNames = Object.keys(topKasirData).reverse(); // Reverse untuk urutan grafik (tertinggi di atas)
+    const kasirValues = Object.values(topKasirData).reverse();
+
+    const kasirChartOptions = {
+        series: [{
+            name: "Pendapatan Dihasilkan",
+            data: kasirValues,
+        }],
+        chart: {
+            type: 'bar',
+            height: Math.max(300, kasirNames.length * 50), // Dynamic height
+            toolbar: { show: false },
+            foreColor: '#D1D5DB' // Warna teks untuk seluruh chart
+        },
+        plotOptions: {
+            bar: {
+                horizontal: true,
+                distributed: true, // Warna berbeda untuk setiap bar
+                dataLabels: { position: 'top' }
+            }
+        },
+        dataLabels: {
+            enabled: true,
+            formatter: function (val) { return fmtRp(val); },
+            offsetX: 0,
+            style: { fontSize: '12px', colors: ['#FFFFFF'] }
+        },
+        xaxis: {
+            categories: kasirNames,
+            labels: {
+                formatter: function (val) { return fmtRp(val); },
+                style: { fontSize: '12px' }
+            }
+        },
+        yaxis: { labels: { style: { fontSize: '12px' } } },
+        grid: { show: false },
+        tooltip: {
+            theme: 'dark', // Tema gelap untuk tooltip
+            y: { formatter: function (val) { return fmtRp(val); } }
+        },
+        colors: [
+            '#F6AD55', '#A0AEC0', '#63B3ED', '#9F7AEA', '#F687B3',
+            '#4FD1C5', '#F6E05E', '#C53030', '#2F855A', '#B794F4'
+        ] // Contoh warna untuk bar
+    };
+
+    // --- Script untuk ApexCharts (Horizontal Bar Chart: Kinerja Pemandu) ---
+    const topPemanduData = @json($topPemandu);
+    const pemanduNames = Object.keys(topPemanduData).reverse();
+    const pemanduValues = Object.values(topPemanduData).reverse();
+
+    const pemanduChartOptions = {
+        series: [{
+            name: "Jumlah Meja Dilayani",
+            data: pemanduValues,
+        }],
+        chart: {
+            type: 'bar',
+            height: Math.max(300, pemanduNames.length * 50), // Dynamic height
+            toolbar: { show: false },
+            foreColor: '#D1D5DB'
+        },
+        plotOptions: {
+            bar: {
+                horizontal: true,
+                distributed: true,
+                dataLabels: { position: 'top' }
+            }
+        },
+        dataLabels: {
+            enabled: true,
+            formatter: function (val) { return val + ' Meja'; }, // Format khusus untuk jumlah meja
+            offsetX: 0,
+            style: { fontSize: '12px', colors: ['#FFFFFF'] }
+        },
+        xaxis: {
+            categories: pemanduNames,
+            labels: {
+                formatter: function (val) { return val + ' Meja'; }, // Format khusus untuk jumlah meja
+                style: { fontSize: '12px' }
+            }
+        },
+        yaxis: { labels: { style: { fontSize: '12px' } } },
+        grid: { show: false },
+        tooltip: {
+            theme: 'dark',
+            y: { formatter: function (val) { return val + ' Meja'; } } // Format khusus untuk jumlah meja
+        },
+        colors: [
+            '#38B2AC', '#81E6D9', '#68D391', '#4FD1C5', '#F6AD55',
+            '#9F7AEA', '#B794F4', '#667EEA', '#ED64A6', '#C53030'
+        ]
+    };
+
+
     document.addEventListener('DOMContentLoaded', () => {
         renderPaymentMethodChart(paymentMethodDistributionData);
+
+        // Render Kasir Chart
+        if (document.getElementById("kasir-chart") && typeof ApexCharts !== 'undefined') {
+            const kasirChart = new ApexCharts(document.getElementById("kasir-chart"), kasirChartOptions);
+            kasirChart.render();
+        }
+
+        // Render Pemandu Chart
+        if (document.getElementById("pemandu-chart") && typeof ApexCharts !== 'undefined') {
+            const pemanduChart = new ApexCharts(document.getElementById("pemandu-chart"), pemanduChartOptions);
+            pemanduChart.render();
+        }
 
         const dateInput = document.getElementById('report-date');
         dateInput.addEventListener('change', () => {

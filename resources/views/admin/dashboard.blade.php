@@ -8,5 +8,5 @@
     <p>Anda memiliki akses tertinggi ke semua fitur sistem, termasuk manajemen pengguna dan konfigurasi utama.</p>
 </div>
 <!-- Contoh penggunaan kelas Tailwind -->
-<p class="tw-text-gray-500 tw-italic">Dashboard ini menggunakan layout utama.</p>
+  
 @endsection

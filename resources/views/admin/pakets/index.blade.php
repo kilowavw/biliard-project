@@ -131,7 +131,7 @@
                     <div>
                         <label for="create_durasi_jam" class="block mb-2 text-sm font-medium text-white">Durasi (Jam)</label>
                         <input type="number" name="durasi_jam" id="create_durasi_jam" value="0" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="0" required="" min="0" step="0.01">
-                        <p class="text-gray-400 text-xs mt-1">Durasi jam yang termasuk dalam paket. Isi 0 jika fleksibel.</p>
+                        <p class="text-gray-400 text-xs mt-1">Durasi jam yang termasuk dalam paket. Isi 0 jika ingin main sepuasnya.</p>
                         <p class="text-red-500 text-xs italic mt-2" id="create-durasi_jam-error"></p>
                     </div>
                     <div>

@@ -12,6 +12,7 @@ use App\Http\Controllers\KuponController;
 use App\Http\Controllers\PaketController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PemanduController;
+use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfilController;
 
 
@@ -39,6 +40,8 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('admin/mejas', MejaController::class)->except(['create', 'show', 'edit'])->names('admin.mejas');
 
         // CRUD service untuk Admin 
+        
+      Route::resource('admin/services', ServiceController::class)->except(['create', 'show', 'edit'])->names('admin.services'); 
       // Tambahkan ini
 
         Route::resource('admin/kupons', KuponController::class)->except(['create', 'show', 'edit'])->names('admin.kupons');
@@ -63,10 +66,13 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin,bos'])->group(function () {
         Route::get('/harga-settings', [HargaSettingController::class, 'index'])->name('admin.harga_settings.index');
         Route::put('/harga-settings', [HargaSettingController::class, 'update'])->name('admin.harga_settings.update');
+        
+        Route::resource('members', MemberController::class);
+        Route::post('members/{member}/extend', [MemberController::class, 'extendMembership'])->name('members.extend');
     });
 
     // KASIR AREA
-    Route::middleware('role:kasir')->group(function () {
+    Route::middleware('role:kasir|admin')->group(function () {
         Route::get('/kasir', [KasirController::class, 'dashboard'])->name('dashboard.kasir');
 
         Route::post('/kasir/pesan-durasi', [KasirController::class, 'pesanDurasi'])->name('kasir.pesanDurasi');
@@ -86,10 +92,14 @@ Route::middleware(['auth'])->group(function () {
         
         Route::post('/kasir/penyewaan/{penyewaan}/bayar', [KasirController::class, 'processPayment'])->name('kasir.processPayment');
 
+       Route::delete('/kasir/penyewaan/{penyewaan}/delete', [KasirController::class, 'deletePenyewaan'])->name('kasir.penyewaan.delete');
+
          Route::get('/kasir/service-order', [ServiceController::class, 'kasirServiceOrderIndex'])->name('kasir.serviceOrderIndex');
         Route::post('/kasir/service-order/process', [ServiceController::class, 'processServiceOrder'])->name('kasir.processServiceOrder');
         Route::put('/kasir/service-transactions/{transaction}/update-status', [ServiceController::class, 'updateServiceTransactionPaymentStatus'])->name('kasir.updateServiceTransactionStatus'); // Untuk bayar nanti
-        // NEW: Rute API untuk validasi kupon
+
+        // NEW: Rute Member
+        
 
     });
 
@@ -113,7 +123,12 @@ Route::middleware('role:pemandu')->group(function () {
     Route::get('/api/kupon/validate', [KuponController::class, 'validateKupon'])->name('api.kupon.validate');
     Route::get('/api/services', [ServiceController::class, 'getServicesJson'])->name('api.services'); // Reuse existing API
     Route::get('/api/pakets', [PaketController::class, 'getPaketsJson'])->name('api.pakets');     // Reuse existing API
-      Route::resource('admin/services', ServiceController::class)->except(['create', 'show', 'edit'])->names('admin.services'); 
+        // NEW: API untuk validasi kode member
+    Route::post('/api/member/validate', [KasirController::class, 'validateMemberCode'])->name('api.member.validate');
+    // NEW: API untuk mendapatkan paket khusus member
+    
+    Route::get('/api/member/validate', [KasirController::class, 'validateMember'])->name('api.member.validate');
+
     
 Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('laporan.harian');
 Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');

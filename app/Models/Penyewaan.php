@@ -13,7 +13,8 @@ class Penyewaan extends Model
         'meja_id', 'nama_penyewa', 'durasi_jam', 'harga_per_jam',
         'kode_kupon', 'diskon_persen', 'total_service', 'service_detail',
         'total_bayar', 'waktu_mulai', 'waktu_selesai', 'status', 'kasir_id',
-        'paket_id', 'pemandu_id', 'is_qris',// Tambahkan ini
+        'paket_id', 'pemandu_id', 'is_qris','member_id',         
+        'diskon_member_persen',
     ];
 
     protected $casts = [
@@ -46,5 +47,9 @@ class Penyewaan extends Model
     public function paket() // Relasi ke model Paket
     {
         return $this->belongsTo(Paket::class);
+    }
+    public function member() // Tambah relasi ke Member
+    {
+        return $this->belongsTo(Member::class);
     }
 }

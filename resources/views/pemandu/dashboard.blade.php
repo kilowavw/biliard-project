@@ -14,7 +14,9 @@
 <div class="container mx-auto p-4">
     <h1 class="text-2xl font-bold mb-4 text-black">Dashboard Pemandu</h1>
 
-    <div id="meja-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-black">
+    <div id="meja-container" 
+    class="grid grid-cols-1 sm:grid-cols-2 [@media(min-width:768px)_and_(max-width:870px)]:grid-cols-2 
+       [@media(min-width:871px)_and_(max-width:1025px)]:grid-cols-3 lg:grid-cols-4 gap-4 text-black">>
         @foreach ($mejas as $meja)
         <div id="meja-card-{{ $meja->id }}" class="p-4 border rounded shadow @if($meja->status === 'dipakai') bg-red-100 @else bg-green-100 @endif">
             <h2 class="text-lg font-semibold">{{ $meja->nama_meja }}</h2>
