@@ -17,6 +17,7 @@ use App\Http\Controllers\ProfilController;
 
 
 Route::middleware('guest')->group(function () {
+    Route::get('/profile', [ProfilController::class, 'index'])->name('profile');
     Route::get('/', [LoginController::class, 'index'])->name('landing');
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
@@ -134,6 +135,6 @@ Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('lapor
 Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
 Route::get('/laporan/tahunan', [LaporanController::class, 'tahunan'])->name('laporan.tahunan');
 
-Route::get('/profile', [ProfilController::class, 'index'])->name('profile');
+
 
 });

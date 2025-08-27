@@ -479,6 +479,7 @@ class KasirController extends Controller
 
         $isQrisPayment = $request->boolean('is_qris', false);
         $penyewaan->update([
+            'kasir_id'      => Auth::id(),
             'kode_kupon'    => $kodeKuponDigunakan,
             'diskon_persen' => $diskonPersenKupon, // Ini adalah diskon dari kupon saja
             'total_bayar'   => $finalTotalBayar,

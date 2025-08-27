@@ -232,7 +232,7 @@
                 <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanData.id});">
                     <i class="fa-solid fa-wine-bottle"></i> Tambah Service
                 </button>
-                <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran.</span>
+                <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran. (abaikan jika sepuasnya)</span>
             `;
         }
     };
@@ -301,7 +301,7 @@
                             <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
                                 <i class="fa-solid fa-wine-bottle"></i> Tambah Service
                             </button>
-                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran.</span>
+                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran. (abaikan jika sepuasnya)</span>
                         `;
                     } else {
                         actionButtonsHtml = `
