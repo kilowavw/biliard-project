@@ -160,7 +160,7 @@
             <nav class="px-2 py-2 space-y-1">
                 {{-- Ini masih dummy, mungkin akan dihapus atau diganti --}}
                 <a href="#" class="flex items-center px-4 py-2 rounded hover:bg-[#282828]">
-                    <i class="fa fa-plus mr-3"></i> Lamp Control
+                    <i class="fa fa-solid fa-lightbulb mr-3"></i> Lamp Control
                 </a>
                 <a onclick="event.preventDefault(); document.getElementById('logout-form').submit();" 
                class="flex items-center px-4 py-2 rounded hover:bg-[#282828] cursor-pointer">

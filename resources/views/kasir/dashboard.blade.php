@@ -16,7 +16,7 @@
             <div id="meja-card-{{ $meja->id }}"
                 class="p-4 border rounded shadow @if($meja->status === 'dipakai') bg-green-100 @else bg-neutral-600 @endif">
                 <h2 class="text-lg font-semibold">{{ $meja->nama_meja }}</h2>
-                <img src="{{ asset('gambar/Meja.png') }}" alt="Meja" width="200" class="mx-auto my-2">
+                <img src="{{ asset('gambar/Meja2.png') }}" alt="Meja" width="200" class="mx-auto my-2">
                 <p id="status-meja-{{ $meja->id }}">Status: {{ $meja->status }}</p>
 
                 @if ($meja->status === 'kosong')
@@ -201,8 +201,6 @@
     });
 </script>
 @endif
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     const serverTime = new Date("{{ $serverTime }}");
     const clientTimeAtLoad = new Date();
@@ -594,18 +592,23 @@
         } catch (error) { Swal.fire('Error', 'Gagal memuat daftar service.', 'error'); console.error('Error fetching services:', error); }
     };
 
-    const populatePaketsDropdown = (filterMember = false) => {
+    const populatePaketsDropdown = (isMember = false) => {
         const paketSelect = getEl('paket_id_select');
         paketSelect.innerHTML = '<option value="">-- Pilih Paket --</option>';
 
         allAvailablePakets.forEach(paket => {
             const isMemberPaket = paket.nama_paket.toLowerCase().startsWith('member');
-            if (!filterMember || (filterMember && isMemberPaket)) {
-                const option = document.createElement('option');
-                option.value = paket.id;
-                option.innerText = paket.nama_paket;
-                paketSelect.appendChild(option);
+
+            // Jika bukan member, jangan tampilkan paket member
+            if (!isMember && isMemberPaket) {
+                return;
             }
+
+            // Jika member, semua paket tampil
+            const option = document.createElement('option');
+            option.value = paket.id;
+            option.innerText = paket.nama_paket;
+            paketSelect.appendChild(option);
         });
     };
 
@@ -613,31 +616,45 @@
         const kodeMember = this.value.trim();
         const memberInfoPreview = getEl('member_info_preview');
         const namaPenyewaInput = getEl('nama_penyewa');
-        const paketSelect = getEl('paket_id_select');
         
-        memberData = { valid: false, nama_member: '', diskon_persen: 0 }; // Reset global member data
+        memberData = { valid: false, nama_member: '', diskon_persen: 0 }; // Reset global
 
         if (kodeMember.length > 0) {
             try {
-                const res = await fetch(`{{ route('api.member.validate') }}?kode_member=${encodeURIComponent(kodeMember)}`);
-                const data = await res.json();
+                const res = await fetch(`{{ route('api.member.validate') }}?kode_member=${encodeURIComponent(kodeMember)}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                let data;
+                if (res.headers.get("content-type")?.includes("application/json")) {
+                    data = await res.json();
+                } else {
+                    throw new Error("Server tidak mengembalikan JSON");
+                }
 
                 if (res.ok && data.valid) {
+                    // Jika member valid
                     memberData = data;
                     memberInfoPreview.innerText = `Member: ${data.nama_member} (Diskon: ${data.diskon_persen}%)`;
                     memberInfoPreview.style.display = 'block';
-                    namaPenyewaInput.value = data.nama_member; // Auto-fill name
+                    memberInfoPreview.classList.remove('text-red-600');
+                    memberInfoPreview.classList.add('text-green-600');
+
+                    namaPenyewaInput.value = data.nama_member;
                     namaPenyewaInput.readOnly = true;
 
-                    populatePaketsDropdown(true); // Filter packages to show only member packages
+                    populatePaketsDropdown(true); // tampilkan semua paket
                 } else {
+                    // Jika bukan member
                     memberInfoPreview.innerText = data.message || 'Kode Member tidak valid.';
                     memberInfoPreview.style.display = 'block';
                     memberInfoPreview.classList.remove('text-green-600');
                     memberInfoPreview.classList.add('text-red-600');
-                    namaPenyewaInput.value = ''; // Clear name if invalid
+
+                    namaPenyewaInput.value = '';
                     namaPenyewaInput.readOnly = false;
-                    populatePaketsDropdown(false); // Show all packages
+
+                    populatePaketsDropdown(false); // sembunyikan paket member
                 }
             } catch (error) {
                 console.error('Error validating member:', error);
@@ -645,17 +662,21 @@
                 memberInfoPreview.style.display = 'block';
                 memberInfoPreview.classList.remove('text-green-600');
                 memberInfoPreview.classList.add('text-red-600');
+
                 namaPenyewaInput.value = '';
                 namaPenyewaInput.readOnly = false;
+
                 populatePaketsDropdown(false);
             }
         } else {
+            // Input kosong
             memberInfoPreview.style.display = 'none';
             namaPenyewaInput.value = '';
             namaPenyewaInput.readOnly = false;
-            populatePaketsDropdown(false); // Show all packages
+
+            populatePaketsDropdown(false); // default: sembunyikan paket member
         }
-    }, 500)); // Debounce to prevent too many requests
+    }, 500)); // Debounce untuk mencegah terlalu banyak request
 
     getEl('paket_id_select').addEventListener('change', function() {
         const selectedPaketId = this.value;
