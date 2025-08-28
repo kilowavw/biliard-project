@@ -1,16 +1,13 @@
 @extends('default')
 
-@section('title', 'Laporan Harian')
+@section('title', 'Laporan Tahunan')
 
 @section('content')
 
-<<<<<<< HEAD
-{{-- PHP untuk menghitung data yang dibutuhkan --}}
-=======
 <?php
 // Variabel PHP sudah disediakan dari controller:
-// $date, $totalPendapatanNett, $paymentMethodDistribution, $pendapatanPerMeja,
-// $topKasir, $topPemandu, $penyewaansPaginated (ini sudah gabungan Penyewaan & ServiceTransaction)
+// $penyewaansPaginated, $totalPendapatanNett, $paymentMethodDistribution, $pendapatanPerMeja
+// $topKasir, $topPemandu, $chartLabelsMonthly, $chartDataMonthly, $year, $years
 // $TOP_PERFORMERS_LIMIT (dari konstanta controller)
 
 $headers = [
@@ -19,12 +16,10 @@ $headers = [
 ];
 ?>
 
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
 <div class="container mx-auto p-4 md:p-6 bg-[#121212] text-white min-h-screen">
-    <h1 class="text-3xl font-bold mb-6 text-white">Laporan Harian Penyewaan & Layanan</h1>
+    <h1 class="text-3xl font-bold mb-6 text-white">Laporan Tahunan Penyewaan & Layanan</h1>
 
-    {{-- Filter tanggal --}}
-    <form id="date-form" action="{{ route('laporan.harian') }}" method="GET" class="mb-6 flex flex-col md:flex-row items-center gap-4">
+    <form id="year-form" action="{{ route('laporan.tahunan') }}" method="GET" class="mb-6 flex flex-col md:flex-row items-center gap-4">
     {{-- Link untuk laporan harian --}}
         <a href="{{ route('laporan.harian') }}" class="flex items-center px-4 py-2 rounded
                     {{ request()->routeIs('laporan.harian') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
@@ -42,42 +37,22 @@ $headers = [
                     <i class="fa-solid fa-calendar-days mr-3"></i> Laporan Tahunan
                 </a>
 
-        <label for="report-date" class="block text-sm font-medium text-gray-300">Pilih Tanggal:</label>
-        <div class="relative max-w-sm">
-            <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
-                <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-<<<<<<< HEAD
-                    <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4Z"/>
-                    <path d="M0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Z"/>
-                </svg>
-            </div>
-            <input datepicker datepicker-autohide type="text" id="report-date" name="date" value="{{ $date }}"
-                class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg block w-full ps-10 p-2.5 placeholder-gray-400"
-                placeholder="Pilih tanggal">
-=======
-                    <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
-                </svg>
-            </div>
-            <input type="date" id="report-date" name="date" value="{{ $date }}"
-                   class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5">
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
-        </div>
+        <label for="report-year" class="block text-sm font-medium text-gray-300">Pilih Tahun:</label>
+        <select id="report-year" name="year"
+                class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5">
+            @foreach($years as $y)
+                <option value="{{ $y }}" {{ $y == $year ? 'selected' : '' }}>{{ $y }}</option>
+            @endforeach
+        </select>
         <button type="submit" class="hidden">Submit</button>
     </form>
 
-    {{-- Total Pendapatan --}}
+    {{-- Total Pendapatan Tahunan --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md flex items-center justify-between border border-gray-700">
             <div>
-<<<<<<< HEAD
-                <p class="text-sm font-medium text-gray-400">Total Pendapatan (Nett)</p>
-                <p id="total-pendapatan" class="text-3xl font-bold text-white mt-1">
-                    Rp {{ number_format($totalPendapatan, 0, ',', '.') }}
-                </p>
-=======
-                <p class="text-sm font-medium text-gray-400">Total Pendapatan (Nett) {{ date('d F Y', strtotime($date)) }}</p>
+                <p class="text-sm font-medium text-gray-400">Total Pendapatan (Nett) Tahun {{ $year }}</p>
                 <p id="total-pendapatan" class="text-3xl font-bold text-white mt-1">Rp {{ number_format($totalPendapatanNett, 0, ',', '.') }}</p>
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
             </div>
             <div class="p-3 bg-blue-900 rounded-full">
                 <i class="fa-solid fa-rupiah-sign text-blue-300 text-2xl"></i>
@@ -85,39 +60,40 @@ $headers = [
         </div>
     </div>
 
+    {{-- Grafik Tren Pendapatan Bulanan (ApexCharts Bar) --}}
+    <div class="w-full bg-[#1e1e1e] rounded-lg shadow dark:bg-gray-800 p-4 md:p-6 mb-8 border border-gray-700">
+        <div class="flex justify-between mb-3">
+            <div class="flex justify-center items-center">
+                <h5 class="text-xl font-bold leading-none text-gray-900 dark:text-white pe-1">Tren Pendapatan Tahun {{ $year }} (Per Bulan)</h5>
+            </div>
+        </div>
+        <div id="yearly-monthly-revenue-chart"></div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {{-- Grafik Distribusi Pendapatan (Chart.js Doughnut) --}}
         <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md border border-gray-700">
-            <h2 class="text-xl font-semibold mb-4 text-white">Distribusi Pendapatan {{ date('d F Y', strtotime($date)) }}</h2>
+            <h2 class="text-xl font-semibold mb-4 text-white">Distribusi Pendapatan Tahun {{ $year }}</h2>
             <div class="chart-container w-full h-80 flex items-center justify-center">
                 <canvas id="paymentMethodChart"></canvas>
             </div>
             <p class="text-sm text-gray-400 mt-4 italic">
-<<<<<<< HEAD
-                *Data distribusi Cash & QRIS diambil dari kolom 'is_qris'.
-=======
                 *Data distribusi Cash & QRIS diambil dari kedua jenis transaksi.
             </p>
         </div>
 
         {{-- Grafik Kinerja Kasir (ApexCharts Horizontal Bar) --}}
         <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md border border-gray-700">
-            <h2 class="text-xl font-semibold mb-4 text-white">Kinerja Kasir {{ date('d F Y', strtotime($date)) }}</h2>
+            <h2 class="text-xl font-semibold mb-4 text-white">Kinerja Kasir Tahun {{ $year }}</h2>
             <div id="kasir-chart"></div>
             <p class="text-sm text-gray-400 mt-4 italic">
                 *Top {{ $TOP_PERFORMERS_LIMIT }} kasir berdasarkan total pendapatan.
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
             </p>
         </div>
     </div>
 
-<<<<<<< HEAD
-    {{-- Pendapatan Tiap Meja --}}
-    <h2 class="text-xl font-semibold mb-4 text-white">Pendapatan Per Meja</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
-=======
     {{-- Daftar Card Pendapatan Per Kasir --}}
-    <h2 class="text-xl font-semibold mb-4 text-white">Pendapatan Per Kasir {{ date('d F Y', strtotime($date)) }}</h2>
+    <h2 class="text-xl font-semibold mb-4 text-white">Pendapatan Per Kasir Tahun {{ $year }}</h2>
     <div id="pendapatan-kasir-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
         @forelse ($topKasir as $name => $revenue)
             <div class="bg-[#1e1e1e] p-4 rounded-lg shadow-md border border-gray-700 hover:bg-[#232323] transition-colors duration-200">
@@ -131,7 +107,7 @@ $headers = [
 
     {{-- Grafik Kinerja Pemandu (ApexCharts Horizontal Bar) --}}
     <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md border border-gray-700 mb-8">
-        <h2 class="text-xl font-semibold mb-4 text-white">Kinerja Pemandu {{ date('d F Y', strtotime($date)) }}</h2>
+        <h2 class="text-xl font-semibold mb-4 text-white">Kinerja Pemandu Tahun {{ $year }}</h2>
         <div id="pemandu-chart"></div>
         <p class="text-sm text-gray-400 mt-4 italic">
             *Top {{ $TOP_PERFORMERS_LIMIT }} pemandu berdasarkan jumlah meja yang dilayani.
@@ -139,7 +115,7 @@ $headers = [
     </div>
 
     {{-- Daftar Card Jumlah Meja Per Pemandu --}}
-    <h2 class="text-xl font-semibold mb-4 text-white">Jumlah Meja Per Pemandu {{ date('d F Y', strtotime($date)) }}</h2>
+    <h2 class="text-xl font-semibold mb-4 text-white">Jumlah Meja Per Pemandu Tahun {{ $year }}</h2>
     <div id="pendapatan-pemandu-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
         @forelse ($topPemandu as $name => $count)
             <div class="bg-[#1e1e1e] p-4 rounded-lg shadow-md border border-gray-700 hover:bg-[#232323] transition-colors duration-200">
@@ -151,59 +127,29 @@ $headers = [
         @endforelse
     </div>
 
-    <h2 class="text-xl font-semibold mb-4 text-white">Pendapatan Per Meja {{ date('d F Y', strtotime($date)) }}</h2>
+    <h2 class="text-xl font-semibold mb-4 text-white">Pendapatan Per Meja Tahun {{ $year }}</h2>
     <div id="pendapatan-meja-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
         @forelse ($pendapatanPerMeja as $meja)
             <div class="bg-[#1e1e1e] p-4 rounded-lg shadow-md border border-gray-700 hover:bg-[#232323] transition-colors duration-200">
                 <h3 class="text-lg font-semibold text-white">{{ $meja['nama_meja'] }}</h3>
-                <p class="text-xl font-bold text-green-400 mt-2">
-                    Rp {{ number_format($meja['total_pendapatan'], 0, ',', '.') }}
-                </p>
+                <p class="text-xl font-bold text-green-400 mt-2">Rp {{ number_format($meja['total_pendapatan'], 0, ',', '.') }}</p>
             </div>
         @empty
-            <p class="text-gray-400 col-span-full">Tidak ada pendapatan tercatat untuk meja pada tanggal ini.</p>
+            <p class="text-gray-400 col-span-full">Tidak ada pendapatan tercatat untuk meja pada tahun ini.</p>
         @endforelse
     </div>
 
-    <h2 class="text-xl font-semibold mb-4 text-white">Detail Transaksi {{ date('d F Y', strtotime($date)) }}</h2>
+    <h2 class="text-xl font-semibold mb-4 text-white">Detail Transaksi Tahun {{ $year }}</h2>
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-<<<<<<< HEAD
-            <thead class="bg-gray-800">
-=======
             <thead class="text-xs text-gray-700 uppercase bg-gray-700 text-white">
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
                 <tr>
                     @foreach($headers as $header)
-                        <th scope="col" class="px-6 py-3 text-white font-bold">
-                            {{ $header }}
-                        </th>
+                        <th scope="col" class="px-6 py-3">{{ $header }}</th>
                     @endforeach
                 </tr>
             </thead>
             <tbody>
-<<<<<<< HEAD
-                @forelse($penyewaans as $penyewaan)
-                    <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
-                        <td class="px-6 py-4">{{ $penyewaan->id }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->nama_penyewa }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->meja->nama_meja ?? $penyewaan->meja_id }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->durasi_jam }}</td>
-                        <td class="px-6 py-4">{{ number_format($penyewaan->harga_per_jam, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ number_format($penyewaan->total_service, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ number_format($penyewaan->total_bayar, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->waktu_mulai->format('H:i:s') }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->waktu_selesai ? $penyewaan->waktu_selesai->format('H:i:s') : '-' }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->status }}</td>
-                        <td class="px-6 py-4">{{ $penyewaan->is_qris ? 'QRIS' : 'Cash' }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-400">
-                            Tidak ada data penyewaan untuk tanggal ini.
-                        </td>
-=======
                 @forelse($penyewaansPaginated as $item) {{-- $item bisa Penyewaan atau ServiceTransaction --}}
                     <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
                         <td class="px-6 py-4">
@@ -228,8 +174,7 @@ $headers = [
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada data transaksi untuk tanggal ini.</td>
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
+                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada data transaksi untuk tahun ini.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -294,9 +239,9 @@ $headers = [
                         mode: 'index',
                         intersect: false,
                         backgroundColor: '#333333', // Dark background for tooltip
-                        titleColor: '#FFFFFF',     // White title color
-                        bodyColor: '#D1D5DB',      // Light gray body color
-                        borderColor: '#4A4A4A',    // Border color
+                        titleColor: '#FFFFFF',
+                        bodyColor: '#D1D5DB',
+                        borderColor: '#4A4A4A',
                         borderWidth: 1,
                         callbacks: {
                             label: function(context) {
@@ -317,9 +262,96 @@ $headers = [
         });
     };
 
+    // --- Script untuk ApexCharts (Bar Chart: Tren Pendapatan Bulanan) ---
+    const chartLabelsMonthly = @json($chartLabelsMonthly);
+    const chartDataMonthly = @json($chartDataMonthly);
+
+    const monthlyRevenueChartOptions = {
+        series: [{
+            name: "Pendapatan",
+            data: chartDataMonthly,
+        }],
+        chart: {
+            height: 350,
+            type: "bar",
+            fontFamily: "Inter, sans-serif",
+            toolbar: {
+                show: false,
+            },
+            foreColor: '#D1D5DB'
+        },
+        plotOptions: {
+            bar: {
+                horizontal: false,
+                columnWidth: "70%",
+                borderRadiusApplication: "end",
+                borderRadius: 8,
+            },
+        },
+        tooltip: {
+            theme: 'dark', // Tema gelap untuk tooltip
+            y: {
+                formatter: function (val) {
+                    return fmtRp(val);
+                }
+            }
+        },
+        states: {
+            hover: {
+                filter: {
+                    type: "darken",
+                    value: 1,
+                },
+            },
+        },
+        stroke: {
+            show: true,
+            width: 0,
+            colors: ["transparent"],
+        },
+        grid: {
+            show: false,
+            strokeDashArray: 4,
+            padding: {
+                left: 2,
+                right: 2,
+                top: -14
+            },
+        },
+        dataLabels: {
+            enabled: false,
+        },
+        legend: {
+            show: false,
+        },
+        xaxis: {
+            categories: chartLabelsMonthly,
+            labels: {
+                show: true,
+                style: {
+                    fontFamily: "Inter, sans-serif",
+                    cssClass: 'text-xs font-normal fill-gray-500 dark:fill-gray-400'
+                }
+            },
+            axisBorder: {
+                show: false,
+            },
+            axisTicks: {
+                show: false,
+            },
+        },
+        yaxis: {
+            show: false,
+        },
+        fill: {
+            opacity: 1,
+            colors: ['#3B82F6']
+        }
+    };
+
     // --- Script untuk ApexCharts (Horizontal Bar Chart: Kinerja Kasir) ---
     const topKasirData = @json($topKasir);
-    const kasirNames = Object.keys(topKasirData).reverse(); // Reverse untuk urutan grafik (tertinggi di atas)
+    const kasirNames = Object.keys(topKasirData).reverse();
     const kasirValues = Object.values(topKasirData).reverse();
 
     const kasirChartOptions = {
@@ -329,14 +361,14 @@ $headers = [
         }],
         chart: {
             type: 'bar',
-            height: Math.max(300, kasirNames.length * 50), // Dynamic height
+            height: Math.max(300, kasirNames.length * 50),
             toolbar: { show: false },
-            foreColor: '#D1D5DB' // Warna teks untuk seluruh chart
+            foreColor: '#D1D5DB'
         },
         plotOptions: {
             bar: {
                 horizontal: true,
-                distributed: true, // Warna berbeda untuk setiap bar
+                distributed: true,
                 dataLabels: { position: 'top' }
             }
         },
@@ -356,13 +388,13 @@ $headers = [
         yaxis: { labels: { style: { fontSize: '12px' } } },
         grid: { show: false },
         tooltip: {
-            theme: 'dark', // Tema gelap untuk tooltip
+            theme: 'dark',
             y: { formatter: function (val) { return fmtRp(val); } }
         },
         colors: [
             '#F6AD55', '#A0AEC0', '#63B3ED', '#9F7AEA', '#F687B3',
             '#4FD1C5', '#F6E05E', '#C53030', '#2F855A', '#B794F4'
-        ] // Contoh warna untuk bar
+        ]
     };
 
     // --- Script untuk ApexCharts (Horizontal Bar Chart: Kinerja Pemandu) ---
@@ -377,7 +409,7 @@ $headers = [
         }],
         chart: {
             type: 'bar',
-            height: Math.max(300, pemanduNames.length * 50), // Dynamic height
+            height: Math.max(300, pemanduNames.length * 50),
             toolbar: { show: false },
             foreColor: '#D1D5DB'
         },
@@ -390,14 +422,14 @@ $headers = [
         },
         dataLabels: {
             enabled: true,
-            formatter: function (val) { return val + ' Meja'; }, // Format khusus untuk jumlah meja
+            formatter: function (val) { return val + ' Meja'; },
             offsetX: 0,
             style: { fontSize: '12px', colors: ['#FFFFFF'] }
         },
         xaxis: {
             categories: pemanduNames,
             labels: {
-                formatter: function (val) { return val + ' Meja'; }, // Format khusus untuk jumlah meja
+                formatter: function (val) { return val + ' Meja'; },
                 style: { fontSize: '12px' }
             }
         },
@@ -405,7 +437,7 @@ $headers = [
         grid: { show: false },
         tooltip: {
             theme: 'dark',
-            y: { formatter: function (val) { return val + ' Meja'; } } // Format khusus untuk jumlah meja
+            y: { formatter: function (val) { return val + ' Meja'; } }
         },
         colors: [
             '#38B2AC', '#81E6D9', '#68D391', '#4FD1C5', '#F6AD55',
@@ -413,25 +445,27 @@ $headers = [
         ]
     };
 
-
     document.addEventListener('DOMContentLoaded', () => {
         renderPaymentMethodChart(paymentMethodDistributionData);
 
-        // Render Kasir Chart
+        if (document.getElementById("yearly-monthly-revenue-chart") && typeof ApexCharts !== 'undefined') {
+            const chart = new ApexCharts(document.getElementById("yearly-monthly-revenue-chart"), monthlyRevenueChartOptions);
+            chart.render();
+        }
+
         if (document.getElementById("kasir-chart") && typeof ApexCharts !== 'undefined') {
             const kasirChart = new ApexCharts(document.getElementById("kasir-chart"), kasirChartOptions);
             kasirChart.render();
         }
 
-        // Render Pemandu Chart
         if (document.getElementById("pemandu-chart") && typeof ApexCharts !== 'undefined') {
             const pemanduChart = new ApexCharts(document.getElementById("pemandu-chart"), pemanduChartOptions);
             pemanduChart.render();
         }
 
-        const dateInput = document.getElementById('report-date');
-        dateInput.addEventListener('change', () => {
-            document.getElementById('date-form').submit();
+        const yearSelect = document.getElementById('report-year');
+        yearSelect.addEventListener('change', () => {
+            document.getElementById('year-form').submit();
         });
     });
 </script>

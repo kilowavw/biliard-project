@@ -131,7 +131,7 @@
                     <div>
                         <label for="create_durasi_jam" class="block mb-2 text-sm font-medium text-white">Durasi (Jam)</label>
                         <input type="number" name="durasi_jam" id="create_durasi_jam" value="0" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="0" required="" min="0" step="0.01">
-                        <p class="text-gray-400 text-xs mt-1">Durasi jam yang termasuk dalam paket. Isi 0 jika fleksibel.</p>
+                        <p class="text-gray-400 text-xs mt-1">Durasi jam yang termasuk dalam paket. Isi 0 jika ingin main sepuasnya.</p>
                         <p class="text-red-500 text-xs italic mt-2" id="create-durasi_jam-error"></p>
                     </div>
                     <div>
@@ -205,7 +205,7 @@
 
         const displayMessage = (type, message) => {
             const alertDiv = getEl('ajax-response-message');
-            alertDiv.className = `flex items-center p-4 mb-4 text-sm rounded-lg ${type === 'success' ? 'text-green-800 bg-green-50 dark:bg-green-800 dark:text-green-400' : 'text-red-800 bg-red-50 dark:bg-red-800 dark:text-red-400'}`;
+            alertDiv.className = flex items-center p-4 mb-4 text-sm rounded-lg ${type === 'success' ? 'text-green-800 bg-green-50 dark:bg-green-800 dark:text-green-400' : 'text-red-800 bg-red-50 dark:bg-red-800 dark:text-red-400'};
             alertDiv.innerHTML = `
                 <svg class="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
@@ -226,25 +226,25 @@
         };
 
         const clearErrors = (formId) => {
-            document.querySelectorAll(`#${formId} p[id$="-error"]`).forEach(p => p.innerText = '');
-            document.querySelectorAll(`#${formId} .border-red-500`).forEach(el => el.classList.remove('border-red-500'));
+            document.querySelectorAll(#${formId} p[id$="-error"]).forEach(p => p.innerText = '');
+            document.querySelectorAll(#${formId} .border-red-500).forEach(el => el.classList.remove('border-red-500'));
         };
 
         const displayErrors = (formId, errors) => {
             clearErrors(formId);
             for (const field in errors) {
-                const errorElId = `${formId}-${field.replace(/\./g, '-')}-error`;
+                const errorElId = ${formId}-${field.replace(/\./g, '-')}-error;
                 const errorEl = getEl(errorElId);
 
                 if (errorEl) {
                     errorEl.innerText = errors[field][0];
                 }
 
-                let inputEl = document.querySelector(`#${formId} [name="${field}"]`);
+                let inputEl = document.querySelector(#${formId} [name="${field}"]);
                 if (!inputEl && field.includes('.')) {
                     const parts = field.split('.');
                     if (parts.length === 3 && parts[0] === 'services') {
-                        inputEl = document.querySelector(`#${formId} input[name="services[${parts[1]}][${parts[2]}]"]`);
+                        inputEl = document.querySelector(#${formId} input[name="services[${parts[1]}][${parts[2]}]"]);
                     }
                 }
                 if (inputEl) {

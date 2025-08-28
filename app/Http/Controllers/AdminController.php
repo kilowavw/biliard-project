@@ -12,8 +12,21 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
-        return view('admin.dashboard');
+    
+        // Panggil controller kasir, dapat view
+        $viewKasir = app(\App\Http\Controllers\KasirController::class)->dashboard();
+    
+        // Kalau return sudah berupa view
+        if ($viewKasir instanceof \Illuminate\View\View) {
+            $contentKasir = $viewKasir->render();
+        } else {
+            // Kalau ternyata string, langsung saja
+            $contentKasir = (string) $viewKasir;
+        }
+    
+        return view('admin.dashboard', compact('contentKasir'));
     }
+    
 
     public function users()
     {

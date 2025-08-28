@@ -1,41 +1,60 @@
 <?php
 
 namespace App\Models;
-
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+>>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
 use Illuminate\Database\Eloquent\Model;
 
 class Member extends Model
 {
-    protected $primaryKey = 'id_member';
-    public $incrementing = false; // karena bukan auto increment
-    protected $keyType = 'string';
+    use HasFactory;
 
     protected $fillable = [
-        'id_member',
         'nama_member',
-        'no_telp',
-        'tgl_bergabung',
-        'status',
+        'kode_member',
+        'email',
+        'no_telepon',
+        'tanggal_daftar',
+        'tanggal_kadaluarsa',
+        'status_keanggotaan',
+        'diskon_persen',
+        'last_payment_date',
+        'last_payment_amount',
+        'last_payment_method',
     ];
 
-    /**
-     * Event saat membuat member baru.
-     * Generate kode otomatis ID Member.
-     */
+    protected $casts = [
+        'tanggal_daftar' => 'date',
+        'tanggal_kadaluarsa' => 'date',
+        'last_payment_date' => 'datetime',
+        'diskon_persen' => 'float',
+        'last_payment_amount' => 'decimal:2',
+    ];
+
+    // Event saat membuat member baru untuk autofill tanggal kadaluarsa
     protected static function booted()
     {
-        static::creating(function ($member) {
-            if (empty($member->id_member)) {
-                do {
-                    // Format: BLxxxx (contoh: BL0007)
-                    $kode = 'BL' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
-                } while (self::where('id_member', $kode)->exists()); // pastikan unik
-
-                $member->id_member = $kode;
+        static::creating(function (Member $member) {
+            if (empty($member->tanggal_daftar)) {
+                $member->tanggal_daftar = now();
+            }
+            if (empty($member->tanggal_kadaluarsa)) {
+                $member->tanggal_kadaluarsa = $member->tanggal_daftar->addMonth(); // Default 1 bulan
             }
         });
     }
-    protected $casts = [
-        'aktif' => 'boolean',
-    ];
+
+    /**
+     * Generate a unique member code.
+     * This is a simple example, you might want a more robust solution.
+     */
+    public static function generateUniqueKodeMember()
+    {
+        $prefix = 'MBR';
+        do {
+            $code = $prefix . mt_rand(10000, 99999);
+        } while (self::where('kode_member', $code)->exists());
+        return $code;
+    }
 }
+>>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88

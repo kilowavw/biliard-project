@@ -16,24 +16,23 @@ class RoleMiddleware
      * @param  string  $role
      * @return mixed
      */
-    public function handle(Request $request, Closure $next, $role)
+    public function handle(Request $request, Closure $next, $roles)
     {
         // Pastikan user sudah login
         if (!Auth::check()) {
-            return redirect('/login'); // Redirect ke login jika belum login
+            return redirect('/login');
         }
-
-        // Cek apakah user memiliki role yang sesuai
-        // Ambil role pengguna saat ini untuk kejelasan kode
+    
         $userRole = Auth::user()->role;
-        $requiredRole = $role; // $role adalah role yang dibutuhkan, misal: 'admin'
-
-        // Bandingkan role
-        if ($userRole !== $requiredRole) {
-            // Gunakan string interpolation (kutip dua) untuk menyisipkan variabel ke dalam pesan.
-            abort(403, "Akses ditolak. Role Anda adalah '{$userRole}', sedangkan akses ini memerlukan role '{$requiredRole}'.");
+    
+        // Pisahkan role yang dikirim (bisa pakai 'kasir,admin' atau 'kasir|admin')
+        $allowedRoles = preg_split('/[|,]/', $roles);
+    
+        // Cek apakah role user ada di dalam daftar allowedRoles
+        if (!in_array($userRole, $allowedRoles)) {
+            abort(403, "Akses ditolak. Role Anda adalah '{$userRole}', sedangkan akses ini memerlukan salah satu role: " . implode(', ', $allowedRoles) . ".");
         }
-
-        return $next($request); // Jika role sesuai, lanjutkan request
+    
+        return $next($request);
     }
 }

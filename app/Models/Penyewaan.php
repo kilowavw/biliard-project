@@ -12,8 +12,14 @@ class Penyewaan extends Model
     protected $fillable = [
         'meja_id', 'nama_penyewa', 'durasi_jam', 'harga_per_jam',
         'kode_kupon', 'diskon_persen', 'total_service', 'service_detail',
+<<<<<<< HEAD
         'total_bayar', 'waktu_mulai', 'waktu_selesai', 'status', 'no_telp', 'kasir_id',
         'paket_id', 'pemandu_id', 'is_qris',// Tambahkan ini
+=======
+        'total_bayar', 'waktu_mulai', 'waktu_selesai', 'status', 'kasir_id',
+        'paket_id', 'pemandu_id', 'is_qris','member_id',         
+        'diskon_member_persen',
+>>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
     ];
 
     protected $casts = [
@@ -46,5 +52,9 @@ class Penyewaan extends Model
     public function paket() // Relasi ke model Paket
     {
         return $this->belongsTo(Paket::class);
+    }
+    public function member() // Tambah relasi ke Member
+    {
+        return $this->belongsTo(Member::class);
     }
 }
