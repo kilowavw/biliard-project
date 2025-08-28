@@ -29,7 +29,7 @@ class RedirectIfAuthenticated
                 // Alihkan berdasarkan peran pengguna
                 switch ($role) {
                     case 'admin':
-                        return redirect()->route('dashboard.admin');
+                        return redirect()->route('dashboard.kasir');
                         break;
                     case 'bos':
                         return redirect()->route('dashboard.bos');

@@ -16,7 +16,7 @@
             <div id="meja-card-{{ $meja->id }}"
                 class="p-4 border rounded shadow @if($meja->status === 'dipakai') bg-green-100 @else bg-neutral-600 @endif">
                 <h2 class="text-lg font-semibold">{{ $meja->nama_meja }}</h2>
-                <img src="{{ asset('gambar/Meja2.png') }}" alt="Meja" width="200" class="mx-auto my-2">
+                <img src="{{ asset('gambar/Meja2.webp') }}" alt="Meja" width="200" class="mx-auto my-2">
                 <p id="status-meja-{{ $meja->id }}">Status: {{ $meja->status }}</p>
 
                 @if ($meja->status === 'kosong')
