@@ -38,7 +38,7 @@ class RedirectIfAuthenticated
                         return redirect()->route('dashboard.kasir');
                         break;
                     case 'supervisor':
-                        return redirect()->route('dashboard.supervisor');
+                        return redirect()->route('dashboard.kasir');
                         break;
                     case 'pemandu':
                         return redirect()->route('dashboard.pemandu');

@@ -15,17 +15,14 @@ class LaporanController extends Controller
     // --- Metode Bantuan untuk Mengambil Data Agregat Harian ---
     private function getDailyAggregates($date)
     {
-        // Data Penyewaan
+        // Pastikan eager loading dilakukan di sini
         $penyewaans = Penyewaan::with(['meja', 'kasir', 'pemandu'])
                                 ->whereDate('waktu_mulai', $date)
                                 ->get();
-
-        // Data ServiceTransaction
         $serviceTransactions = ServiceTransaction::with('kasir')
                                                 ->whereDate('transaction_time', $date)
                                                 ->get();
 
-        // ... (Bagian totalPendapatanNett, paymentMethodDistribution, pendapatanPerMeja tetap sama) ...
         $totalPendapatanPenyewaan = $penyewaans->sum('total_bayar');
         $totalPendapatanService = $serviceTransactions->sum('total_bayar');
         $totalPendapatanNett = $totalPendapatanPenyewaan + $totalPendapatanService;
@@ -42,34 +39,30 @@ class LaporanController extends Controller
         if (empty($paymentMethodDistribution)) { $paymentMethodDistribution[] = ['label' => 'Tidak Ada Data', 'value' => 1]; }
 
         $pendapatanPerMeja = $penyewaans->groupBy('meja_id')->map(function ($items, $mejaId) {
+            // Perbaikan: Pastikan $items->first() tidak null dan meja ada
             $namaMeja = $items->first()->meja->nama_meja ?? 'Meja ' . $mejaId;
             return [ 'meja_id' => $mejaId, 'nama_meja' => $namaMeja, 'total_pendapatan' => $items->sum('total_bayar'), ];
         })->sortByDesc('total_pendapatan')->values();
 
 
-        // === PERBAIKAN LOGIKA KINERJA KASIR ===
+        // Kinerja Kasir
         $kasirRevenue = collect();
-        // Kasir mendapatkan kredit dari setiap transaksi Penyewaan yang mereka proses
         $penyewaans->each(function ($p) use ($kasirRevenue) {
-            if ($p->kasir) {
+            if ($p->kasir) { // Perbaikan: Cek jika relasi kasir ada
                 $kasirRevenue[$p->kasir->name] = ($kasirRevenue[$p->kasir->name] ?? 0) + $p->total_bayar;
             }
         });
-        // Kasir juga mendapatkan kredit dari setiap ServiceTransaction
         $serviceTransactions->each(function ($st) use ($kasirRevenue) {
-            if ($st->kasir) {
+            if ($st->kasir) { // Perbaikan: Cek jika relasi kasir ada
                 $kasirRevenue[$st->kasir->name] = ($kasirRevenue[$st->kasir->name] ?? 0) + $st->total_bayar;
             }
         });
         $topKasir = $kasirRevenue->sortDesc()->take(self::TOP_PERFORMERS_LIMIT);
 
-
-        // === PERBAIKAN LOGIKA KINERJA PEMANDU ===
+        // Kinerja Pemandu
         $pemanduMejaCount = collect();
-        // Pemandu mendapatkan kredit dari setiap Penyewaan yang mereka layani (memesan meja)
         $penyewaans->each(function ($p) use ($pemanduMejaCount) {
-            if ($p->pemandu) {
-                // Setiap transaksi Penyewaan dihitung sebagai 1 meja yang dilayani pemandu
+            if ($p->pemandu) { // Perbaikan: Cek jika relasi pemandu ada
                 $pemanduMejaCount[$p->pemandu->name] = ($pemanduMejaCount[$p->pemandu->name] ?? 0) + 1;
             }
         });
@@ -89,19 +82,15 @@ class LaporanController extends Controller
     // --- Metode Bantuan untuk Mengambil Data Agregat Bulanan ---
     private function getMonthlyAggregates($year, $month)
     {
-        // Data Penyewaan
         $penyewaans = Penyewaan::with(['meja', 'kasir', 'pemandu'])
                                 ->whereMonth('waktu_mulai', $month)
                                 ->whereYear('waktu_mulai', $year)
                                 ->get();
-
-        // Data ServiceTransaction
         $serviceTransactions = ServiceTransaction::with('kasir')
                                                 ->whereMonth('transaction_time', $month)
                                                 ->whereYear('transaction_time', $year)
                                                 ->get();
 
-        // ... (Bagian totalPendapatanNett, paymentMethodDistribution, pendapatanPerMeja tetap sama) ...
         $totalPendapatanPenyewaan = $penyewaans->sum('total_bayar');
         $totalPendapatanService = $serviceTransactions->sum('total_bayar');
         $totalPendapatanNett = $totalPendapatanPenyewaan + $totalPendapatanService;
@@ -122,8 +111,6 @@ class LaporanController extends Controller
             return [ 'meja_id' => $mejaId, 'nama_meja' => $namaMeja, 'total_pendapatan' => $items->sum('total_bayar'), ];
         })->sortByDesc('total_pendapatan')->values();
 
-
-        // === PERBAIKAN LOGIKA KINERJA KASIR ===
         $kasirRevenue = collect();
         $penyewaans->each(function ($p) use ($kasirRevenue) {
             if ($p->kasir) {
@@ -137,8 +124,6 @@ class LaporanController extends Controller
         });
         $topKasir = $kasirRevenue->sortDesc()->take(self::TOP_PERFORMERS_LIMIT);
 
-
-        // === PERBAIKAN LOGIKA KINERJA PEMANDU ===
         $pemanduMejaCount = collect();
         $penyewaans->each(function ($p) use ($pemanduMejaCount) {
             if ($p->pemandu) {
@@ -161,17 +146,13 @@ class LaporanController extends Controller
     // --- Metode Bantuan untuk Mengambil Data Agregat Tahunan ---
     private function getYearlyAggregates($year)
     {
-        // Data Penyewaan
         $penyewaans = Penyewaan::with(['meja', 'kasir', 'pemandu'])
                                 ->whereYear('waktu_mulai', $year)
                                 ->get();
-
-        // Data ServiceTransaction
         $serviceTransactions = ServiceTransaction::with('kasir')
                                                 ->whereYear('transaction_time', $year)
                                                 ->get();
 
-        // ... (Bagian totalPendapatanNett, paymentMethodDistribution, pendapatanPerMeja tetap sama) ...
         $totalPendapatanPenyewaan = $penyewaans->sum('total_bayar');
         $totalPendapatanService = $serviceTransactions->sum('total_bayar');
         $totalPendapatanNett = $totalPendapatanPenyewaan + $totalPendapatanService;
@@ -192,8 +173,6 @@ class LaporanController extends Controller
             return [ 'meja_id' => $mejaId, 'nama_meja' => $namaMeja, 'total_pendapatan' => $items->sum('total_bayar'), ];
         })->sortByDesc('total_pendapatan')->values();
 
-
-        // === PERBAIKAN LOGIKA KINERJA KASIR ===
         $kasirRevenue = collect();
         $penyewaans->each(function ($p) use ($kasirRevenue) {
             if ($p->kasir) {
@@ -207,8 +186,6 @@ class LaporanController extends Controller
         });
         $topKasir = $kasirRevenue->sortDesc()->take(self::TOP_PERFORMERS_LIMIT);
 
-
-        // === PERBAIKAN LOGIKA KINERJA PEMANDU ===
         $pemanduMejaCount = collect();
         $penyewaans->each(function ($p) use ($pemanduMejaCount) {
             if ($p->pemandu) {
@@ -228,50 +205,36 @@ class LaporanController extends Controller
         ];
     }
 
-    // --- Metode Laporan Utama (harian, bulanan, tahunan) tetap sama seperti sebelumnya ---
-    // Pastikan variabel yang dikirim ke view tetap konsisten, terutama topKasir dan topPemandu.
 
     /**
-     * Menampilkan laporan harian data penyewaan dan layanan dengan pagination untuk detail transaksi.
+     * Menampilkan laporan harian data penyewaan dan layanan.
      */
     public function harian(Request $request)
     {
         $date = $request->input('date', date('Y-m-d'));
         $aggregates = $this->getDailyAggregates($date);
 
-        $allTransactionsQuery = collect()
-            ->concat($aggregates['penyewaans']->map(function($item) {
-                $item->type = 'Penyewaan';
-                return $item;
-            }))
-            ->concat($aggregates['serviceTransactions']->map(function($item) {
-                $item->type = 'Service';
-                return $item;
-            }))
-            ->sortByDesc(function ($item) {
-                return $item->transaction_time ?? $item->waktu_mulai;
-            });
+        $penyewaansPaginated = Penyewaan::with(['meja', 'kasir', 'pemandu'])
+                                        ->whereDate('waktu_mulai', $date)
+                                        ->orderBy('waktu_mulai', 'desc')
+                                        ->paginate(10, ['*'], 'penyewaan_page');
 
-        $page = $request->get('page', 1);
-        $perPage = 10;
-        $offset = ($page * $perPage) - $perPage;
-        $paginatedTransactions = new LengthAwarePaginator(
-            $allTransactionsQuery->slice($offset, $perPage),
-            $allTransactionsQuery->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        $serviceTransactionsPaginated = ServiceTransaction::with('kasir')
+                                                        ->whereDate('transaction_time', $date)
+                                                        ->orderBy('transaction_time', 'desc')
+                                                        ->paginate(10, ['*'], 'service_page');
+
 
         return view('laporan.harian', array_merge($aggregates, [
             'date' => $date,
-            'penyewaansPaginated' => $paginatedTransactions,
+            'penyewaansPaginated' => $penyewaansPaginated,
+            'serviceTransactionsPaginated' => $serviceTransactionsPaginated,
             'TOP_PERFORMERS_LIMIT' => self::TOP_PERFORMERS_LIMIT,
         ]));
     }
 
     /**
-     * Menampilkan laporan bulanan data penyewaan dan layanan dengan pagination untuk detail transaksi.
+     * Menampilkan laporan bulanan data penyewaan dan layanan.
      */
     public function bulanan(Request $request)
     {
@@ -317,29 +280,17 @@ class LaporanController extends Controller
         $chartDataDaily = array_values($chartDataDaily);
 
 
-        $allTransactionsQuery = collect()
-            ->concat($aggregates['penyewaans']->map(function($item) {
-                $item->type = 'Penyewaan';
-                return $item;
-            }))
-            ->concat($aggregates['serviceTransactions']->map(function($item) {
-                $item->type = 'Service';
-                return $item;
-            }))
-            ->sortByDesc(function ($item) {
-                return $item->transaction_time ?? $item->waktu_mulai;
-            });
+        $penyewaansPaginated = Penyewaan::with(['meja', 'kasir', 'pemandu'])
+                                        ->whereMonth('waktu_mulai', $month)
+                                        ->whereYear('waktu_mulai', $year)
+                                        ->orderBy('waktu_mulai', 'desc')
+                                        ->paginate(10, ['*'], 'penyewaan_page');
 
-        $page = $request->get('page', 1);
-        $perPage = 10;
-        $offset = ($page * $perPage) - $perPage;
-        $paginatedTransactions = new LengthAwarePaginator(
-            $allTransactionsQuery->slice($offset, $perPage),
-            $allTransactionsQuery->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        $serviceTransactionsPaginated = ServiceTransaction::with('kasir')
+                                                        ->whereMonth('transaction_time', $month)
+                                                        ->whereYear('transaction_time', $year)
+                                                        ->orderBy('transaction_time', 'desc')
+                                                        ->paginate(10, ['*'], 'service_page');
 
         $months = [];
         for ($i = 1; $i <= 12; $i++) {
@@ -348,7 +299,8 @@ class LaporanController extends Controller
         $years = range(date('Y') - 5, date('Y') + 1);
 
         return view('laporan.bulanan', array_merge($aggregates, [
-            'penyewaansPaginated' => $paginatedTransactions,
+            'penyewaansPaginated' => $penyewaansPaginated,
+            'serviceTransactionsPaginated' => $serviceTransactionsPaginated,
             'chartLabelsDaily' => $chartLabelsDaily,
             'chartDataDaily' => $chartDataDaily,
             'year' => $year,
@@ -360,7 +312,7 @@ class LaporanController extends Controller
     }
 
     /**
-     * Menampilkan laporan tahunan yang diagregasi per bulan dengan pagination untuk detail transaksi.
+     * Menampilkan laporan tahunan data penyewaan dan layanan.
      */
     public function tahunan(Request $request)
     {
@@ -403,34 +355,21 @@ class LaporanController extends Controller
         $chartDataMonthly = array_values($chartDataMonthly);
 
 
-        $allTransactionsQuery = collect()
-            ->concat($aggregates['penyewaans']->map(function($item) {
-                $item->type = 'Penyewaan';
-                return $item;
-            }))
-            ->concat($aggregates['serviceTransactions']->map(function($item) {
-                $item->type = 'Service';
-                return $item;
-            }))
-            ->sortByDesc(function ($item) {
-                return $item->transaction_time ?? $item->waktu_mulai;
-            });
+        $penyewaansPaginated = Penyewaan::with(['meja', 'kasir', 'pemandu'])
+                                        ->whereYear('waktu_mulai', $year)
+                                        ->orderBy('waktu_mulai', 'desc')
+                                        ->paginate(10, ['*'], 'penyewaan_page');
 
-        $page = $request->get('page', 1);
-        $perPage = 10;
-        $offset = ($page * $perPage) - $perPage;
-        $paginatedTransactions = new LengthAwarePaginator(
-            $allTransactionsQuery->slice($offset, $perPage),
-            $allTransactionsQuery->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        $serviceTransactionsPaginated = ServiceTransaction::with('kasir')
+                                                        ->whereYear('transaction_time', $year)
+                                                        ->orderBy('transaction_time', 'desc')
+                                                        ->paginate(10, ['*'], 'service_page');
 
         $years = range(date('Y') - 5, date('Y') + 1);
 
         return view('laporan.tahunan', array_merge($aggregates, [
-            'penyewaansPaginated' => $paginatedTransactions,
+            'penyewaansPaginated' => $penyewaansPaginated,
+            'serviceTransactionsPaginated' => $serviceTransactionsPaginated,
             'chartLabelsMonthly' => $chartLabelsMonthly,
             'chartDataMonthly' => $chartDataMonthly,
             'year' => $year,

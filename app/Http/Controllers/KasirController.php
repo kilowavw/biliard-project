@@ -494,9 +494,11 @@ class KasirController extends Controller
 
     public function deletePenyewaan(Request $request, Penyewaan $penyewaan)
     {
-        if (Auth::user()->role !== 'admin') {
-            return response()->json(['message' => 'Akses ditolak. Penghapusan meja hanya bisa dilakukan oleh Supervisor.'], 403);
-        }
+        if (!in_array(Auth::user()->role, ['admin', 'supervisor'])) {
+            return response()->json([
+                'message' => 'Akses ditolak. Penghapusan meja hanya bisa dilakukan oleh Admin atau Supervisor.'
+            ], 403);
+        }        
 
         if ($penyewaan->status !== 'berlangsung') {
             return response()->json(['message' => 'Penyewaan tidak dalam status aktif sehingga tidak dapat dihapus.'], 400);

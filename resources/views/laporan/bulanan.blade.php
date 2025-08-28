@@ -6,13 +6,18 @@
 
 <?php
 // Variabel PHP sudah disediakan dari controller:
-// $penyewaansPaginated, $totalPendapatanNett, $paymentMethodDistribution, $pendapatanPerMeja
+// $penyewaansPaginated, $serviceTransactionsPaginated, $totalPendapatanNett, $paymentMethodDistribution, $pendapatanPerMeja
 // $topKasir, $topPemandu, $chartLabelsDaily, $chartDataDaily, $year, $month, $months, $years
 // $TOP_PERFORMERS_LIMIT (dari konstanta controller)
 
-$headers = [
-    'Tipe', 'ID', 'Nama', 'Meja/Layanan', 'Durasi/Qty','Harga Jam', 'Diskon', 'Total Bayar',
-    'Waktu Mulai/Transaksi', 'Waktu Selesai', 'Status', 'Metode Bayar', 'Kasir', 'Pemandu'
+$penyewaanHeaders = [
+    'ID', 'Nama Penyewa', 'Meja', 'Durasi (Jam)', 'Diskon', 'Total Bayar',
+    'Waktu Mulai', 'Waktu Selesai', 'Status', 'Metode Bayar', 'Kasir', 'Pemandu'
+];
+
+$serviceTransactionHeaders = [
+    'ID', 'Nama Pelanggan', 'Detail Layanan', 'Diskon', 'Total Bayar',
+    'Waktu Transaksi', 'Status Pembayaran', 'Metode Bayar', 'Kasir'
 ];
 ?>
 
@@ -37,7 +42,8 @@ $headers = [
                     <i class="fa-solid fa-calendar-days mr-3"></i> Laporan Tahunan
                 </a>
 
-        <label for="report-month" class="block text-sm font-medium text-gray-300">Pilih Bulan:</label>
+
+        <label for="report-month" class="block text-sm font-medium text-white">Pilih Bulan:</label>
         <select id="report-month" name="month"
                 class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5">
             @foreach($months as $key => $name)
@@ -45,7 +51,7 @@ $headers = [
             @endforeach
         </select>
 
-        <label for="report-year" class="block text-sm font-medium text-gray-300">Pilih Tahun:</label>
+        <label for="report-year" class="block text-sm font-medium text-white">Pilih Tahun:</label>
         <select id="report-year" name="year"
                 class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5">
             @foreach($years as $y)
@@ -147,51 +153,95 @@ $headers = [
         @endforelse
     </div>
 
-    <h2 class="text-xl font-semibold mb-4 text-white">Detail Transaksi {{ date('F Y', mktime(0, 0, 0, $month, 10, $year)) }}</h2>
+    {{-- Detail Transaksi Penyewaan --}}
+    <h2 class="text-xl font-semibold mb-4 text-white mt-8">Detail Transaksi Penyewaan {{ date('F Y', mktime(0, 0, 0, $month, 10, $year)) }}</h2>
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
             <thead class="text-xs text-gray-700 uppercase bg-gray-700 text-white">
                 <tr>
-                    @foreach($headers as $header)
+                    @foreach($penyewaanHeaders as $header)
                         <th scope="col" class="px-6 py-3">{{ $header }}</th>
                     @endforeach
                 </tr>
             </thead>
             <tbody>
-                @forelse($penyewaansPaginated as $item) {{-- $item bisa Penyewaan atau ServiceTransaction --}}
+                @forelse($penyewaansPaginated as $item)
                     <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
-                        <td class="px-6 py-4">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                {{ $item->type == 'Penyewaan' ? 'bg-blue-600 text-blue-100' : 'bg-purple-600 text-purple-100' }}">
-                                {{ $item->type }}
-                            </span>
-                        </td>
                         <td class="px-6 py-4">{{ $item->id }}</td>
-                        <td class="px-6 py-4">{{ $item->nama_penyewa ?? $item->customer_name }}</td>
-                        <td class="px-6 py-4">{{ $item->meja->nama_meja ?? ($item->service_detail ? 'Layanan Lain' : '-') }}</td>
-                        <td class="px-6 py-4">{{ $item->durasi_jam ?? ($item->service_detail ? count($item->service_detail) . ' item' : '-') }}</td>
-                        <td class="px-6 py-4">{{ number_format($item->harga_per_jam ?? ($item->service_detail ? collect($item->service_detail)->sum('subtotal') / count($item->service_detail) : 0), 0, ',', '.') }}</td>
+                        <td class="px-6 py-4">{{ $item->nama_penyewa }}</td>
+                        <td class="px-6 py-4">{{ $item->meja->nama_meja ?? $item->meja_id }}</td>
+                        <td class="px-6 py-4">{{ $item->durasi_jam }}</td>
                         <td class="px-6 py-4">{{ number_format($item->diskon_amount ?? ($item->diskon_persen ? ($item->diskon_persen/100 * $item->total_bayar) : 0), 0, ',', '.') }} ({{ $item->diskon_persen ?? 0 }}%)</td>
                         <td class="px-6 py-4">{{ number_format($item->total_bayar, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ ($item->waktu_mulai ?? $item->transaction_time)->format('d/m/Y H:i:s') }}</td>
+                        <td class="px-6 py-4">{{ $item->waktu_mulai->format('d/m/Y H:i:s') }}</td>
                         <td class="px-6 py-4">{{ $item->waktu_selesai ? $item->waktu_selesai->format('d/m/Y H:i:s') : '-' }}</td>
-                        <td class="px-6 py-4">{{ $item->status ?? $item->payment_status }}</td>
-                        <td class="px-6 py-4">{{ $item->is_qris ? 'QRIS' : ($item->payment_method ?? 'Cash') }}</td>
+                        <td class="px-6 py-4">{{ $item->status }}</td>
+                        <td class="px-6 py-4">{{ $item->is_qris ? 'QRIS' : 'Cash' }}</td>
                         <td class="px-6 py-4">{{ $item->kasir->name ?? '-' }}</td>
                         <td class="px-6 py-4">{{ $item->pemandu->name ?? '-' }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada data transaksi untuk bulan ini.</td>
+                        <td colspan="{{ count($penyewaanHeaders) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada transaksi penyewaan untuk bulan ini.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-
-    {{-- Tautan Pagination --}}
     <div class="mt-4">
-        {{ $penyewaansPaginated->appends(request()->query())->links() }}
+        {{ $penyewaansPaginated->appends(request()->except('penyewaan_page'))->links() }}
+    </div>
+
+    {{-- Detail Transaksi Layanan --}}
+    <h2 class="text-xl font-semibold mb-4 text-white mt-8">Detail Transaksi Layanan {{ date('F Y', mktime(0, 0, 0, $month, 10, $year)) }}</h2>
+    <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
+        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-700 text-white">
+                <tr>
+                    @foreach($serviceTransactionHeaders as $header)
+                        <th scope="col" class="px-6 py-3">{{ $header }}</th>
+                    @endforeach
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($serviceTransactionsPaginated as $item)
+                    <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
+                        <td class="px-6 py-4">{{ $item->id }}</td>
+                        <td class="px-6 py-4">{{ $item->customer_name }}</td>
+                        <td class="px-6 py-4">
+                            @php
+                                $services = is_string($item->service_detail)
+                                    ? json_decode($item->service_detail, true)
+                                    : $item->service_detail;
+                            @endphp
+
+                            @if(!empty($services))
+                                <ul class="list-disc list-inside text-gray-400">
+                                    @foreach($services as $service)
+                                        <li>{{ $service['nama'] }} ({{ $service['jumlah'] }}x) - Rp {{ number_format($service['subtotal'], 0, ',', '.') }}</li>
+                                    @endforeach
+                                </ul>
+                            @else
+                                -
+                            @endif
+                        </td>
+                        <td class="px-6 py-4">{{ number_format($item->diskon_amount ?? ($item->diskon_persen ? ($item->diskon_persen/100 * $item->total_bayar) : 0), 0, ',', '.') }} ({{ $item->diskon_persen ?? 0 }}%)</td>
+                        <td class="px-6 py-4">{{ number_format($item->total_bayar, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4">{{ $item->transaction_time->format('d/m/Y H:i:s') }}</td>
+                        <td class="px-6 py-4">{{ $item->payment_status }}</td>
+                        <td class="px-6 py-4">{{ $item->payment_method }}</td>
+                        <td class="px-6 py-4">{{ $item->kasir->name ?? '-' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="{{ count($serviceTransactionHeaders) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada transaksi layanan untuk bulan ini.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-4">
+        {{ $serviceTransactionsPaginated->appends(request()->except('service_page'))->links() }}
     </div>
 
 </div>
@@ -212,6 +262,7 @@ $headers = [
         }).format(amount);
     };
 
+    // ... (Script untuk paymentMethodChart, dailyRevenueChartOptions, kasirChartOptions, pemanduChartOptions tetap sama) ...
     // --- Script untuk Chart.js (Doughnut Chart: Distribusi Pembayaran) ---
     let paymentMethodChartInstance = null;
     const paymentMethodDistributionData = @json($paymentMethodDistribution);
@@ -246,7 +297,7 @@ $headers = [
                     tooltip: {
                         mode: 'index',
                         intersect: false,
-                        backgroundColor: '#333333', // Dark background for tooltip
+                        backgroundColor: '#333333',
                         titleColor: '#FFFFFF',
                         bodyColor: '#D1D5DB',
                         borderColor: '#4A4A4A',
@@ -297,7 +348,7 @@ $headers = [
             },
         },
         tooltip: {
-            theme: 'dark', // Tema gelap untuk tooltip
+            theme: 'dark',
             y: {
                 formatter: function (val) {
                     return fmtRp(val);

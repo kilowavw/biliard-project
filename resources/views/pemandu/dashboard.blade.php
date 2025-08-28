@@ -505,7 +505,7 @@
         const isSepuasnyaCheckbox = getEl('is_sepuasnya');
         const durasiJamWrapper = getEl('durasi_jam_wrapper');
         const durasiJamInput = getEl('durasi_jam');
-        const paketDeskripsiPreview = getEl('paket_deskripsi_preview');
+        const paketDeskripsiPreview = getEl('paket_deskripsi_preview'); // Ini sudah ada
 
         if (selectedPaketId) {
             const selectedPaket = allAvailablePakets.find(p => p.id == selectedPaketId);
@@ -527,16 +527,29 @@
                 isSepuasnyaCheckbox.disabled = true;
                 durasiJamInput.disabled = true;
 
-                let desc = [];
-                if (isiPaket.harga_paket) desc.push(`Harga: ${fmtRp(isiPaket.harga_paket)}`);
+                let descHtml = []; // Ubah menjadi array untuk HTML
+                if (isiPaket.harga_paket) descHtml.push(`<strong>Harga:</strong> ${fmtRp(isiPaket.harga_paket)}`);
                 if (isiPaket.durasi_jam !== undefined) {
-                    if (isiPaket.durasi_jam > 0) desc.push(`Durasi: ${fmtDur(isiPaket.durasi_jam)}`);
-                    else desc.push(`Durasi: Main Sepuasnya`);
+                    if (isiPaket.durasi_jam > 0) descHtml.push(`<strong> Durasi:</strong> ${fmtDur(isiPaket.durasi_jam)}`);
+                    else descHtml.push(`<strong>Durasi:</strong> Main Sepuasnya`);
                 }
-                if (isiPaket.services && isiPaket.services.length > 0) desc.push(`Service: ${isiPaket.services.length} item`);
-                if (isiPaket.deskripsi_tambahan) desc.push(isiPaket.deskripsi_tambahan);
                 
-                paketDeskripsiPreview.innerText = desc.join(' | ');
+                // --- Bagian baru untuk detail service ---
+                if (isiPaket.services && isiPaket.services.length > 0) {
+                    let serviceListHtml = '<p class="mt-2 mb-1"><strong>Termasuk Layanan:</strong></p><ul class="list-disc list-inside ml-4">';
+                    isiPaket.services.forEach(s => {
+                        serviceListHtml += `<li>${s.nama} (${s.jumlah}x) - ${fmtRp(s.subtotal)}</li>`;
+                    });
+                    serviceListHtml += '</ul>';
+                    descHtml.push(serviceListHtml);
+                } else {
+                    descHtml.push('<p class="mt-2">Tidak ada layanan tambahan dalam paket ini.</p>');
+                }
+                // --- Akhir bagian baru ---
+
+                if (isiPaket.deskripsi_tambahan) descHtml.push(`<p class="mt-2"><strong>Deskripsi:</strong> ${isiPaket.deskripsi_tambahan}</p>`);
+                
+                paketDeskripsiPreview.innerHTML = descHtml.join(''); // Menggunakan innerHTML
                 paketDeskripsiPreview.style.display = 'block';
 
                 getEl('formPesan').action = '{{ route('pemandu.pesanPaket') }}';
@@ -552,6 +565,7 @@
             durasiJamInput.required = true;
 
             paketDeskripsiPreview.style.display = 'none';
+            paketDeskripsiPreview.innerHTML = ''; // Pastikan juga mengosongkan konten
 
             getEl('formPesan').action = '{{ route('pemandu.pesanDurasi') }}';
         }

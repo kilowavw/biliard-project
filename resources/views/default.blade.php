@@ -28,6 +28,7 @@
 
     <!-- Chart.js & Flowbite Datepicker -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.4.1/datepicker.min.js"></script>
 
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -91,7 +92,7 @@
                     switch (Auth::user()->role) {
                         case 'admin': $homeRoute = route('dashboard.kasir'); break;
                         case 'bos': $homeRoute = route('dashboard.bos'); break;
-                        case 'supervisor': $homeRoute = route('dashboard.supervisor'); break;
+                        case 'supervisor': $homeRoute = route('dashboard.kasir'); break;
                         case 'kasir': $homeRoute = route('dashboard.kasir'); break;
                         default: $homeRoute = route('login');
                     }

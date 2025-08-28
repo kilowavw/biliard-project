@@ -7,12 +7,17 @@
 <?php
 // Variabel PHP sudah disediakan dari controller:
 // $date, $totalPendapatanNett, $paymentMethodDistribution, $pendapatanPerMeja,
-// $topKasir, $topPemandu, $penyewaansPaginated (ini sudah gabungan Penyewaan & ServiceTransaction)
-// $TOP_PERFORMERS_LIMIT (dari konstanta controller)
+// $topKasir, $topPemandu, $TOP_PERFORMERS_LIMIT
+// $penyewaansPaginated, $serviceTransactionsPaginated (Keduanya sudah di-paginate dan terpisah)
 
-$headers = [
-    'Tipe', 'ID', 'Nama', 'Meja/Layanan', 'Durasi/Qty','Harga Jam', 'Diskon', 'Total Bayar',
-    'Waktu Mulai/Transaksi', 'Waktu Selesai', 'Status', 'Metode Bayar', 'Kasir', 'Pemandu'
+$penyewaanHeaders = [
+    'ID', 'Nama Penyewa', 'Meja', 'Durasi (Jam)', 'Diskon', 'Total Bayar',
+    'Waktu Mulai', 'Waktu Selesai', 'Status', 'Metode Bayar', 'Kasir', 'Pemandu'
+];
+
+$serviceTransactionHeaders = [
+    'ID', 'Nama Pelanggan', 'Detail Layanan', 'Diskon', 'Total Bayar',
+    'Waktu Transaksi', 'Status Pembayaran', 'Metode Bayar', 'Kasir'
 ];
 ?>
 
@@ -41,7 +46,7 @@ $headers = [
         <div class="relative max-w-sm">
             <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
                 <svg class="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1 0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
+                    <path d="M20 4a2 2 0 0 0-2-2h-2V1a1 1_0 0 0-2 0v1h-3V1a1 1 0 0 0-2 0v1H6V1a1 1 0 0 0-2 0v1H2a2 2 0 0 0-2 2v2h20V4ZM0 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8H0v10Zm5-8h10a1 1 0 0 1 0 2H5a1 1 0 0 1 0-2Z"/>
                 </svg>
             </div>
             <input type="date" id="report-date" name="date" value="{{ $date }}"
@@ -132,51 +137,96 @@ $headers = [
         @endforelse
     </div>
 
-    <h2 class="text-xl font-semibold mb-4 text-white">Detail Transaksi {{ date('d F Y', strtotime($date)) }}</h2>
+    {{-- Detail Transaksi Penyewaan --}}
+    <h2 class="text-xl font-semibold mb-4 text-white mt-8">Detail Transaksi Penyewaan {{ date('d F Y', strtotime($date)) }}</h2>
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
             <thead class="text-xs text-gray-700 uppercase bg-gray-700 text-white">
                 <tr>
-                    @foreach($headers as $header)
+                    @foreach($penyewaanHeaders as $header)
                         <th scope="col" class="px-6 py-3">{{ $header }}</th>
                     @endforeach
                 </tr>
             </thead>
             <tbody>
-                @forelse($penyewaansPaginated as $item) {{-- $item bisa Penyewaan atau ServiceTransaction --}}
+                @forelse($penyewaansPaginated as $item)
                     <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
-                        <td class="px-6 py-4">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                {{ $item->type == 'Penyewaan' ? 'bg-blue-600 text-blue-100' : 'bg-purple-600 text-purple-100' }}">
-                                {{ $item->type }}
-                            </span>
-                        </td>
                         <td class="px-6 py-4">{{ $item->id }}</td>
-                        <td class="px-6 py-4">{{ $item->nama_penyewa ?? $item->customer_name }}</td>
-                        <td class="px-6 py-4">{{ $item->meja->nama_meja ?? ($item->service_detail ? 'Layanan Lain' : '-') }}</td>
-                        <td class="px-6 py-4">{{ $item->durasi_jam ?? ($item->service_detail ? count($item->service_detail) . ' item' : '-') }}</td>
-                        <td class="px-6 py-4">{{ number_format($item->harga_per_jam ?? ($item->service_detail ? collect($item->service_detail)->sum('subtotal') / count($item->service_detail) : 0), 0, ',', '.') }}</td>
+                        <td class="px-6 py-4">{{ $item->nama_penyewa }}</td>
+                        <td class="px-6 py-4">{{ $item->meja->nama_meja ?? $item->meja_id }}</td>
+                        <td class="px-6 py-4">{{ $item->durasi_jam }}</td>
                         <td class="px-6 py-4">{{ number_format($item->diskon_amount ?? ($item->diskon_persen ? ($item->diskon_persen/100 * $item->total_bayar) : 0), 0, ',', '.') }} ({{ $item->diskon_persen ?? 0 }}%)</td>
                         <td class="px-6 py-4">{{ number_format($item->total_bayar, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ ($item->waktu_mulai ?? $item->transaction_time)->format('d/m/Y H:i:s') }}</td>
+                        <td class="px-6 py-4">{{ $item->waktu_mulai->format('d/m/Y H:i:s') }}</td>
                         <td class="px-6 py-4">{{ $item->waktu_selesai ? $item->waktu_selesai->format('d/m/Y H:i:s') : '-' }}</td>
-                        <td class="px-6 py-4">{{ $item->status ?? $item->payment_status }}</td>
-                        <td class="px-6 py-4">{{ $item->is_qris ? 'QRIS' : ($item->payment_method ?? 'Cash') }}</td>
+                        <td class="px-6 py-4">{{ $item->status }}</td>
+                        <td class="px-6 py-4">{{ $item->is_qris ? 'QRIS' : 'Cash' }}</td>
                         <td class="px-6 py-4">{{ $item->kasir->name ?? '-' }}</td>
                         <td class="px-6 py-4">{{ $item->pemandu->name ?? '-' }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada data transaksi untuk tanggal ini.</td>
+                        <td colspan="{{ count($penyewaanHeaders) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada transaksi penyewaan untuk tanggal ini.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-
-    {{-- Tautan Pagination --}}
     <div class="mt-4">
-        {{ $penyewaansPaginated->appends(request()->query())->links() }}
+        {{ $penyewaansPaginated->appends(request()->except('penyewaan_page'))->links() }}
+    </div>
+
+    {{-- Detail Transaksi Layanan --}}
+    <h2 class="text-xl font-semibold mb-4 text-white mt-8">Detail Transaksi Layanan {{ date('d F Y', strtotime($date)) }}</h2>
+    <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
+        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-700 text-white">
+                <tr>
+                    @foreach($serviceTransactionHeaders as $header)
+                        <th scope="col" class="px-6 py-3">{{ $header }}</th>
+                    @endforeach
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($serviceTransactionsPaginated as $item)
+                    <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
+                        <td class="px-6 py-4">{{ $item->id }}</td>
+                        <td class="px-6 py-4">{{ $item->customer_name }}</td>
+                        <td class="px-6 py-4">
+                        @php
+                            $services = is_string($item->service_detail)
+                                ? json_decode($item->service_detail, true)
+                                : $item->service_detail;
+                        @endphp
+
+                        @if(!empty($services))
+                            <ul class="list-disc list-inside text-gray-400">
+                                @foreach($services as $service)
+                                    <li>{{ $service['nama'] }} ({{ $service['jumlah'] }}x) - Rp {{ number_format($service['subtotal'], 0, ',', '.') }}</li>
+                                @endforeach
+                            </ul>
+                        @else
+                            -
+                        @endif
+                    </td>
+
+                        <td class="px-6 py-4">{{ number_format($item->diskon_amount ?? ($item->diskon_persen ? ($item->diskon_persen/100 * $item->total_bayar) : 0), 0, ',', '.') }} ({{ $item->diskon_persen ?? 0 }}%)</td>
+                        <td class="px-6 py-4">{{ number_format($item->total_bayar, 0, ',', '.') }}</td>
+                        <td class="px-6 py-4">{{ $item->transaction_time->format('d/m/Y H:i:s') }}</td>
+                        <td class="px-6 py-4">{{ $item->payment_status }}</td>
+                        <td class="px-6 py-4">{{ $item->payment_method }}</td>
+                        <td class="px-6 py-4">{{ $item->kasir->name ?? '-' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="{{ count($serviceTransactionHeaders) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada transaksi layanan untuk tanggal ini.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-4">
+        {{ $serviceTransactionsPaginated->appends(request()->except('service_page'))->links() }}
     </div>
 
 </div>
@@ -197,6 +247,7 @@ $headers = [
         }).format(amount);
     };
 
+    // ... (Script untuk paymentMethodChart, kasirChartOptions, pemanduChartOptions tetap sama) ...
     // --- Script untuk Chart.js (Doughnut Chart: Distribusi Pembayaran) ---
     let paymentMethodChartInstance = null;
     const paymentMethodDistributionData = @json($paymentMethodDistribution);
@@ -231,10 +282,10 @@ $headers = [
                     tooltip: {
                         mode: 'index',
                         intersect: false,
-                        backgroundColor: '#333333', // Dark background for tooltip
-                        titleColor: '#FFFFFF',     // White title color
-                        bodyColor: '#D1D5DB',      // Light gray body color
-                        borderColor: '#4A4A4A',    // Border color
+                        backgroundColor: '#333333',
+                        titleColor: '#FFFFFF',
+                        bodyColor: '#D1D5DB',
+                        borderColor: '#4A4A4A',
                         borderWidth: 1,
                         callbacks: {
                             label: function(context) {
@@ -257,7 +308,7 @@ $headers = [
 
     // --- Script untuk ApexCharts (Horizontal Bar Chart: Kinerja Kasir) ---
     const topKasirData = @json($topKasir);
-    const kasirNames = Object.keys(topKasirData).reverse(); // Reverse untuk urutan grafik (tertinggi di atas)
+    const kasirNames = Object.keys(topKasirData).reverse();
     const kasirValues = Object.values(topKasirData).reverse();
 
     const kasirChartOptions = {
@@ -267,14 +318,14 @@ $headers = [
         }],
         chart: {
             type: 'bar',
-            height: Math.max(300, kasirNames.length * 50), // Dynamic height
+            height: Math.max(300, kasirNames.length * 50),
             toolbar: { show: false },
-            foreColor: '#D1D5DB' // Warna teks untuk seluruh chart
+            foreColor: '#D1D5DB'
         },
         plotOptions: {
             bar: {
                 horizontal: true,
-                distributed: true, // Warna berbeda untuk setiap bar
+                distributed: true,
                 dataLabels: { position: 'top' }
             }
         },
@@ -294,13 +345,13 @@ $headers = [
         yaxis: { labels: { style: { fontSize: '12px' } } },
         grid: { show: false },
         tooltip: {
-            theme: 'dark', // Tema gelap untuk tooltip
+            theme: 'dark',
             y: { formatter: function (val) { return fmtRp(val); } }
         },
         colors: [
             '#F6AD55', '#A0AEC0', '#63B3ED', '#9F7AEA', '#F687B3',
             '#4FD1C5', '#F6E05E', '#C53030', '#2F855A', '#B794F4'
-        ] // Contoh warna untuk bar
+        ]
     };
 
     // --- Script untuk ApexCharts (Horizontal Bar Chart: Kinerja Pemandu) ---
@@ -315,7 +366,7 @@ $headers = [
         }],
         chart: {
             type: 'bar',
-            height: Math.max(300, pemanduNames.length * 50), // Dynamic height
+            height: Math.max(300, pemanduNames.length * 50),
             toolbar: { show: false },
             foreColor: '#D1D5DB'
         },
@@ -328,14 +379,14 @@ $headers = [
         },
         dataLabels: {
             enabled: true,
-            formatter: function (val) { return val + ' Meja'; }, // Format khusus untuk jumlah meja
+            formatter: function (val) { return val + ' Meja'; },
             offsetX: 0,
             style: { fontSize: '12px', colors: ['#FFFFFF'] }
         },
         xaxis: {
             categories: pemanduNames,
             labels: {
-                formatter: function (val) { return val + ' Meja'; }, // Format khusus untuk jumlah meja
+                formatter: function (val) { return val + ' Meja'; },
                 style: { fontSize: '12px' }
             }
         },
@@ -343,7 +394,7 @@ $headers = [
         grid: { show: false },
         tooltip: {
             theme: 'dark',
-            y: { formatter: function (val) { return val + ' Meja'; } } // Format khusus untuk jumlah meja
+            y: { formatter: function (val) { return val + ' Meja'; } }
         },
         colors: [
             '#38B2AC', '#81E6D9', '#68D391', '#4FD1C5', '#F6AD55',
@@ -351,17 +402,14 @@ $headers = [
         ]
     };
 
-
     document.addEventListener('DOMContentLoaded', () => {
         renderPaymentMethodChart(paymentMethodDistributionData);
 
-        // Render Kasir Chart
         if (document.getElementById("kasir-chart") && typeof ApexCharts !== 'undefined') {
             const kasirChart = new ApexCharts(document.getElementById("kasir-chart"), kasirChartOptions);
             kasirChart.render();
         }
 
-        // Render Pemandu Chart
         if (document.getElementById("pemandu-chart") && typeof ApexCharts !== 'undefined') {
             const pemanduChart = new ApexCharts(document.getElementById("pemandu-chart"), pemanduChartOptions);
             pemanduChart.render();

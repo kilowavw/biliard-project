@@ -14,6 +14,7 @@ use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PemanduController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfilController;
+use App\Http\Controllers\LampuController;
 
 
 Route::middleware('guest')->group(function () {
@@ -22,6 +23,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
     Route::post('/register', [LoginController::class, 'register'])->name('register');
+    Route::get('/control', [LampuController::class, 'index'])->name('lampu.index');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -64,7 +66,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Rute yang dapat diakses oleh Admin DAN BOS
     // Ini mencakup "Kebijakan (pengaturan harga_settings)" untuk Admin dan "Bos Mengelola Harga"
-    Route::middleware(['role:admin,bos'])->group(function () {
+    Route::middleware(['role:admin|bos'])->group(function () {
         Route::get('/harga-settings', [HargaSettingController::class, 'index'])->name('admin.harga_settings.index');
         Route::put('/harga-settings', [HargaSettingController::class, 'update'])->name('admin.harga_settings.update');
         
@@ -73,7 +75,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // KASIR AREA
-    Route::middleware('role:kasir|admin')->group(function () {
+    Route::middleware('role:kasir|admin|supervisor')->group(function () {
         Route::get('/kasir', [KasirController::class, 'dashboard'])->name('dashboard.kasir');
 
         Route::post('/kasir/pesan-durasi', [KasirController::class, 'pesanDurasi'])->name('kasir.pesanDurasi');
@@ -95,18 +97,16 @@ Route::middleware(['auth'])->group(function () {
 
        Route::delete('/kasir/penyewaan/{penyewaan}/delete', [KasirController::class, 'deletePenyewaan'])->name('kasir.penyewaan.delete');
 
-         Route::get('/kasir/service-order', [ServiceController::class, 'kasirServiceOrderIndex'])->name('kasir.serviceOrderIndex');
+        Route::get('/kasir/service-order', [ServiceController::class, 'kasirServiceOrderIndex'])->name('kasir.serviceOrderIndex');
         Route::post('/kasir/service-order/process', [ServiceController::class, 'processServiceOrder'])->name('kasir.processServiceOrder');
         Route::put('/kasir/service-transactions/{transaction}/update-status', [ServiceController::class, 'updateServiceTransactionPaymentStatus'])->name('kasir.updateServiceTransactionStatus'); // Untuk bayar nanti
 
         // NEW: Rute Member
-        
-
     });
 
     // Pemandu AREA (Mirip Kasir tapi tanpa pembayaran, hanya pesan dan tambah service)
    // Pemandu AREA (Semua fungsionalitas Kasir kecuali pembayaran)
-Route::middleware('role:pemandu')->group(function () {
+Route::middleware('role:pemandu|supervisor')->group(function () {
     Route::get('/pemandu', [PemanduController::class, 'dashboard'])->name('dashboard.pemandu');
 
     Route::post('/pemandu/pesan-durasi', [PemanduController::class, 'pesanDurasi'])->name('pemandu.pesanDurasi');
@@ -134,6 +134,7 @@ Route::middleware('role:pemandu')->group(function () {
 Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('laporan.harian');
 Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
 Route::get('/laporan/tahunan', [LaporanController::class, 'tahunan'])->name('laporan.tahunan');
+
 
 
 
