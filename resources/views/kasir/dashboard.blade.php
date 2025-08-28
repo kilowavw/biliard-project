@@ -4,8 +4,6 @@
 
 @section('content')
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
 <div class="container mx-auto p-4">
     <h1 class="text-2xl font-bold mb-4 text-black">Dashboard Kasir</h1>
 

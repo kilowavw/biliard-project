@@ -28,9 +28,6 @@
 
     <!-- Chart.js & Flowbite Datepicker -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css">
-
 
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -72,7 +69,7 @@
         <!-- Logo + Close -->
         <div class="flex justify-between items-center px-2 py-4">
             <div class="text-white text-2xl font-bold tracking-wide">
-                  <i class="mdi mdi-billiards text-2xl"></i> Billiard-APP
+                <i class="fa-solid fa-pool-8-ball mr-2"></i> Billiard-APP
             </div>
             <!-- Close SELALU ada (mobile + tablet) -->
             <button type="button" data-drawer-hide="drawer-sidebar" aria-controls="drawer-sidebar"
