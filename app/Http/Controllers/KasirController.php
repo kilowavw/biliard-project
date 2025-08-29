@@ -36,11 +36,11 @@ class KasirController extends Controller
             'meja_id' => 'required|exists:mejas,id',
             'nama_penyewa' => 'required|string|max:255',
             'durasi_jam' => 'required|numeric|min:0.01',
-            'kode_member' => 'nullable|string|max:255',
+            'kode_member' => 'nullable|string|max:255', // Tambah validasi kode member
         ]);
 
-    $hargaSetting = HargaSetting::latest()->first();
-    $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
+        $hargaSetting = HargaSetting::latest()->first();
+        $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
 
         $diskonMember = 0;
         $memberId = null;
@@ -78,6 +78,7 @@ class KasirController extends Controller
         ]);
 
         Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
+
         return redirect()->route('dashboard.kasir')->with('success', 'Penyewaan durasi tetap dimulai.');
     }
 
@@ -89,8 +90,8 @@ class KasirController extends Controller
             'kode_member' => 'nullable|string|max:255', // Tambah validasi kode member
         ]);
 
-    $hargaSetting = HargaSetting::latest()->first();
-    $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
+        $hargaSetting = HargaSetting::latest()->first();
+        $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
 
         $diskonMember = 0;
         $memberId = null;
@@ -129,6 +130,7 @@ class KasirController extends Controller
         ]);
 
         Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
+
         return redirect()->route('dashboard.kasir')->with('success', 'Penyewaan "Main Sepuasnya" dimulai.');
     }
 
@@ -278,6 +280,8 @@ class KasirController extends Controller
                 ];
             });
 
+        return response()->json($penyewaan);
+    }
 
     public function addDuration(Request $request, Penyewaan $penyewaan)
     {

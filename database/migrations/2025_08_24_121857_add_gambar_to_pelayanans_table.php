@@ -6,13 +6,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void {
-        Schema::table('members', function (Blueprint $table) {
-            $table->boolean('status')->default(0)->after('tgl_bergabung');
-        });
+        Schema::table('pelayanans', function (Blueprint $table) {
+    $table->string('gambar')->nullable()->after('harga'); // bisa null jika belum upload
+});
+
     }
 
     public function down(): void {
-        Schema::table('members', function (Blueprint $table) {
+        Schema::table('pelayanans', function (Blueprint $table) {
             $table->dropColumn('status');
         });
     }

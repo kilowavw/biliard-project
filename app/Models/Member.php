@@ -1,8 +1,8 @@
 <?php
 
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
 use Illuminate\Database\Eloquent\Model;
 
 class Member extends Model
@@ -57,4 +57,3 @@ class Member extends Model
         return $code;
     }
 }
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88

@@ -18,6 +18,7 @@
                 <h2 class="text-lg font-semibold">{{ $meja->nama_meja }}</h2>
                 <img src="{{ asset('gambar/Meja2.webp') }}" alt="Meja" width="200" class="mx-auto my-2">
                 <p id="status-meja-{{ $meja->id }}">Status: {{ $meja->status }}</p>
+
                 @if ($meja->status === 'kosong')
                     <button id="btn-pesan-{{ $meja->id }}" onclick="openModal({{ $meja->id }})"
                         class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Pesan</button>
@@ -35,6 +36,7 @@
         <form id="formPesan" method="POST">
             @csrf
             <input type="hidden" name="meja_id" id="modal_meja_id">
+
             <div class="mb-3">
                 <label for="kode_member" class="block text-sm font-medium text-gray-700">Kode Member (Opsional)</label>
                 <div class="flex">
@@ -47,24 +49,6 @@
                 <p id="member_info_preview" class="text-sm text-green-600 mt-1 italic" style="display:none;"></p>
             </div>
 
-            <!-- Checkbox Member -->
-            <div class="mb-3">
-                <label class="inline-flex items-center">
-                    <input type="checkbox" id="is_member" name="is_member" class="form-checkbox h-5 w-5 text-blue-600">
-                    <span class="ml-2 text-gray-700">Member</span>
-                </label>
-            </div>
-
-            <!-- No. Telp (hanya muncul kalau member dicentang) -->
-            <div class="mb-3" id="no_telp_wrapper" style="display:none;">
-                <label for="no_telp" class="form-label">No. Telepon</label>
-                <input type="text" name="no_telp" id="no_telp" class="form-input" placeholder="Masukkan nomor telepon">
-                <p id="diskon_info" class="text-green-600 text-sm mt-1" style="display:none;">
-                    Anda mendapatkan potongan 5%!
-                </p>
-            </div>
-
-            <!-- Pilih Paket -->
             <div class="mb-3">
                 <label for="nama_penyewa" class="block text-sm font-medium text-gray-700">Nama Penyewa <span class="text-red-500">*</span></label>
                 <input type="text" name="nama_penyewa" id="nama_penyewa" required
@@ -79,6 +63,7 @@
                 </select>
                 <p id="paket_deskripsi_preview" class="text-sm text-gray-500 mt-1 italic" style="display:none;"></p>
             </div>
+
             <div id="non_paket_options" class="space-y-3">
                 <div class="flex items-center">
                     <input type="checkbox" id="is_sepuasnya" name="is_sepuasnya"
@@ -91,6 +76,7 @@
                         class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2">
                 </div>
             </div>
+
             <div class="flex justify-end mt-4 space-x-2">
                 <button type="button" onclick="closeModal()"
                     class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Batal</button>
@@ -192,6 +178,7 @@
         </form>
     </div>
 </div>
+
 
 @if(session('error'))
 <script>
@@ -500,7 +487,6 @@
         } catch (error) { console.error('Error fetching and rendering mejas:', error); }
     };
 
-    
     const fetchPaymentDetails = async (penyewaanId) => {
         const p = currentActiveRentals[penyewaanId]; if (!p) { Swal.fire('Error', 'Detail penyewaan tidak ditemukan.', 'error'); closePaymentModal(); return; }
 
@@ -510,10 +496,8 @@
         const serviceDetails = p.service_detail;
         const diskonMemberPersen = parseFloat(p.diskon_member_persen || 0);
 
-    let waktuSelesaiAktual = getCalibratedNow();
-    if (p.is_sepuasnya) {
-        durasiUntukPerhitungan = (waktuSelesaiAktual.getTime() - new Date(p.waktu_mulai).getTime()) / (1000 * 60 * 60);
-    }
+        let waktuSelesaiAktual = getCalibratedNow();
+        if (p.is_sepuasnya) { durasiUntukPerhitungan = (waktuSelesaiAktual.getTime() - new Date(p.waktu_mulai).getTime()) / (1000 * 60 * 60); }
 
         const updateTotalDisplay = (diskonPersenKupon = 0) => {
             const subtotalMain = durasiUntukPerhitungan * hargaPerJam;
@@ -570,70 +554,7 @@
             }
             updateTotalDisplay(diskonPersen);
         }, 500);
->>>>>>> 3edfb861a8b12a99d28e3b7ac8f3d86bc6a30d88
     };
-
-    // Set detail modal
-    getEl('payment_meja_nama').innerText = p.meja_nama;
-    getEl('payment_nama_penyewa').innerText = p.nama_penyewa;
-    getEl('payment_durasi').innerText = p.is_sepuasnya ? 'N/A (Main Sepuasnya)' : fmtDur(p.durasi_jam);
-    getEl('payment_mode_sepuasnya_info').style.display = p.is_sepuasnya ? 'block' : 'none';
-    getEl('payment_waktu_mulai').innerText = fmtFullDt(p.waktu_mulai);
-    getEl('payment_waktu_selesai_terjadwal').innerText = p.waktu_selesai ? fmtFullDt(p.waktu_selesai) : 'N/A';
-    getEl('payment_waktu_selesai_aktual').innerText = fmtFullDt(waktuSelesaiAktual);
-    getEl('payment_harga_per_jam').innerText = fmtRp(hargaPerJam);
-
-    // List service
-    const serviceDetailListEl = getEl('payment_service_detail');
-    serviceDetailListEl.innerHTML = '';
-    if(serviceDetails.length > 0) {
-        serviceDetails.forEach(s => {
-            const li = document.createElement('li');
-            li.innerText = `${s.nama} (${s.jumlah}x) - ${fmtRp(s.subtotal)}`;
-            serviceDetailListEl.appendChild(li);
-        });
-    } else {
-        serviceDetailListEl.innerHTML = '<li>Tidak ada layanan tambahan.</li>';
-    }
-
-    // --- DISKON MEMBER LANGSUNG DARI DATA JSON ---
-    let diskonMember = 0;
-    if (p.is_member) {
-        diskonMember = (durasiUntukPerhitungan * hargaPerJam + initialTotalService) * 0.05; // contoh 5%
-        document.getElementById('diskon_info').style.display = 'block';
-    } else {
-        document.getElementById('diskon_info').style.display = 'none';
-    }
-
-    // Kupon input
-    let currentKuponDiskon = 0;
-    getEl('kode_kupon').oninput = debounce(async function() {
-        const kuponCode = this.value.trim();
-        currentKuponDiskon = 0;
-        if(kuponCode) {
-            try {
-                const res = await fetch(`{{ route('api.kupon.validate') }}?code=${encodeURIComponent(kuponCode)}`);
-                if(res.ok) {
-                    const data = await res.json();
-                    currentKuponDiskon = (durasiUntukPerhitungan * hargaPerJam + initialTotalService) * (parseFloat(data.diskon_persen)/100 || 0);
-                    alert(`Kupon "${kuponCode}" berhasil diterapkan! Diskon ${data.diskon_persen}%`);
-                } else {
-                    const errData = await res.json();
-                    alert('Kupon tidak valid: ' + (errData.message || 'Kode kupon tidak ditemukan atau kadaluarsa.'));
-                }
-            } catch(e) {
-                console.error('Error validating kupon:', e);
-            }
-        }
-        updateTotalDisplay(currentKuponDiskon, diskonMember);
-    }, 500);
-
-    // Update total awal
-    updateTotalDisplay(0, diskonMember);
-};
-
-
-
 
     const fetchAndRenderServicesForAdd = async () => {
         try {
@@ -977,13 +898,6 @@
         populatePaketsDropdown(); // Initial populate
         fetchAndRenderMejas();
         setInterval(fetchAndRenderMejas, 5000);
-    });
-</script>
-
-<script>
-    document.getElementById('is_member').addEventListener('change', function () {
-        let wrapper = document.getElementById('no_telp_wrapper');
-        wrapper.style.display = this.checked ? 'block' : 'none';
     });
 </script>
 @endsection

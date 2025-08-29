@@ -234,7 +234,7 @@ class LaporanController extends Controller
     /**
      * Menampilkan laporan harian data penyewaan dan layanan dengan pagination untuk detail transaksi.
      */
-public function harian(Request $request)
+    public function harian(Request $request)
     {
         $date = $request->input('date', date('Y-m-d'));
         $aggregates = $this->getDailyAggregates($date);
@@ -269,7 +269,6 @@ public function harian(Request $request)
             'TOP_PERFORMERS_LIMIT' => self::TOP_PERFORMERS_LIMIT,
         ]));
     }
-
 
     /**
      * Menampilkan laporan bulanan data penyewaan dan layanan dengan pagination untuk detail transaksi.

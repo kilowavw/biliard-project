@@ -14,14 +14,19 @@ use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PemanduController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfilController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\PelayananController;
 
 Route::middleware('guest')->group(function () {
-    Route::get('/profile', [ProfilController::class, 'index'])->name('profile');
+    Route::get('/profile', [ProfilController::class, 'index'])->name('home');
     Route::get('/', [LoginController::class, 'index'])->name('landing');
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
     Route::post('/register', [LoginController::class, 'register'])->name('register');
 });
+
+Route::resource('events', EventController::class);
+Route::resource('pelayanan', PelayananController::class);
 
 Route::middleware(['auth'])->group(function () {
 

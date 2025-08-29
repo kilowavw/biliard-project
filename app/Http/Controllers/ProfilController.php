@@ -43,11 +43,29 @@ class ProfilController extends Controller
                 'email' => 'info@billiardjaya.com',
                 'alamat' => 'Jl. Raya Billiard No. 10, Bandung',
                 'telepon' => '+62 812-3456-7890',
+            ],
+            'harga' => [
+                [
+                    'judul' => 'Daftar Harga Perjam',
+                    'deskripsi' => 'Non Paket',
+                    'image' => 'images/non_paket.png'
+                ],
+                [
+                    'judul' => 'Daftar Paket Siang',
+                    'deskripsi' => 'Jam 10:00 s.d 17:00',
+                    'image' => 'images/Promo_siang.png'
+                ],
+                [
+                    'judul' => 'Daftar Paket Malam',
+                    'deskripsi' => 'Jam 17:00 s.d 24:00',
+                    'image' => 'images/Promo_malam.png'
+
+                ],
             ]
         ];
         
 
-        return view('profile', compact('data'));
+        return view('compro/home', compact('data'));
     }
 }
 
