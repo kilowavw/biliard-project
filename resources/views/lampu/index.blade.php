@@ -14,7 +14,10 @@
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
     <div class="bg-white p-8 rounded-lg w-full max-w-md card">
         <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Kirim Perintah</h1>
-        
+        <div class="mt-4 text-center">
+            <p class="text-gray-700 font-semibold">Status Perangkat Saat Ini:</p>
+            <span id="deviceStatus" class="font-bold text-xl text-gray-500">Menghubungkan...</span>
+        </div>
         <form id="perintahForm" action="{{ url('/api/kirim-perintah') }}" method="POST">
             @csrf
             <div class="mb-6">
@@ -77,6 +80,41 @@
                 });
             });
         });
+
+        function fetchDeviceStatus() {
+        fetch('{{ url('/api/get-status') }}', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const statusText = document.getElementById('deviceStatus');
+            statusText.textContent = data.perangkat_status;
+            
+            // Atur warna berdasarkan status
+            if (data.perangkat_status === 'ON') {
+                statusText.classList.remove('text-red-500');
+                statusText.classList.add('text-green-500');
+            } else if (data.perangkat_status === 'OFF') {
+                statusText.classList.remove('text-green-500');
+                statusText.classList.add('text-red-500');
+            } else {
+                statusText.classList.remove('text-green-500', 'text-red-500');
+                statusText.classList.add('text-gray-500');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching device status:', error);
+        });
+    }
+
+    // Panggil fungsi status setiap 3 detik
+    setInterval(fetchDeviceStatus, 3000);
+
+    // Panggil sekali saat halaman dimuat
+    fetchDeviceStatus();
     </script>
 </body>
 </html>

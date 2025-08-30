@@ -24,6 +24,7 @@ $serviceTransactionHeaders = [
 <div class="container mx-auto p-4 md:p-6 bg-[#121212] text-white min-h-screen">
     <h1 class="text-3xl font-bold mb-6 text-white">Laporan Harian Penyewaan & Layanan</h1>
 
+    {{-- Filter tanggal --}}
     <form id="date-form" action="{{ route('laporan.harian') }}" method="GET" class="mb-6 flex flex-col md:flex-row items-center gap-4">
     {{-- Link untuk laporan harian --}}
         <a href="{{ route('laporan.harian') }}" class="flex items-center px-4 py-2 rounded
@@ -130,7 +131,9 @@ $serviceTransactionHeaders = [
         @forelse ($pendapatanPerMeja as $meja)
             <div class="bg-[#1e1e1e] p-4 rounded-lg shadow-md border border-gray-700 hover:bg-[#232323] transition-colors duration-200">
                 <h3 class="text-lg font-semibold text-white">{{ $meja['nama_meja'] }}</h3>
-                <p class="text-xl font-bold text-green-400 mt-2">Rp {{ number_format($meja['total_pendapatan'], 0, ',', '.') }}</p>
+                <p class="text-xl font-bold text-green-400 mt-2">
+                    Rp {{ number_format($meja['total_pendapatan'], 0, ',', '.') }}
+                </p>
             </div>
         @empty
             <p class="text-gray-400 col-span-full">Tidak ada pendapatan tercatat untuk meja pada tanggal ini.</p>

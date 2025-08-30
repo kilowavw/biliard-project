@@ -45,4 +45,31 @@ class LampuController extends Controller
             'perintah' => $perintah,
         ]);
     }
+
+    public function updateStatus(Request $request)
+    {
+        $request->validate(['status' => 'required|string|in:ON,OFF']);
+
+        $status = $request->input('status');
+
+        // Simpan status perangkat ke file teks sementara
+        file_put_contents(storage_path('app/perangkat_status.txt'), $status);
+
+        Log::info("Status perangkat diperbarui: '{$status}'");
+
+        return response()->json(['success' => true]);
+    }
+
+    // Metode BARU untuk diambil oleh web (view)
+    public function getStatus()
+    {
+        $status = file_exists(storage_path('app/perangkat_status.txt'))
+                    ? file_get_contents(storage_path('app/perangkat_status.txt'))
+                    : "UNKNOWN"; // Status default jika file belum ada
+
+        return response()->json([
+            'status' => 'success',
+            'perangkat_status' => $status,
+        ]);
+    }
 }

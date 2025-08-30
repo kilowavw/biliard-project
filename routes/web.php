@@ -15,16 +15,20 @@ use App\Http\Controllers\PemanduController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\LampuController;
-
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\PelayananController;
 
 Route::middleware('guest')->group(function () {
-    Route::get('/profile', [ProfilController::class, 'index'])->name('profile');
+    Route::get('/profile', [ProfilController::class, 'index'])->name('home');
     Route::get('/', [LoginController::class, 'index'])->name('landing');
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
     Route::post('/register', [LoginController::class, 'register'])->name('register');
     Route::get('/control', [LampuController::class, 'index'])->name('lampu.index');
 });
+
+Route::resource('events', EventController::class);
+Route::resource('pelayanan', PelayananController::class);
 
 Route::middleware(['auth'])->group(function () {
 
@@ -131,6 +135,11 @@ Route::middleware('role:pemandu|supervisor')->group(function () {
     Route::get('/api/member/validate', [KasirController::class, 'validateMember'])->name('api.member.validate');
 
     
+// Member
+Route::resource('members', MemberController::class);
+Route::get('/cek-member', [MemberController::class, 'cekMember']);
+
+// Laporan
 Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('laporan.harian');
 Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
 Route::get('/laporan/tahunan', [LaporanController::class, 'tahunan'])->name('laporan.tahunan');

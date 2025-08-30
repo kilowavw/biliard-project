@@ -28,7 +28,11 @@
 
     <!-- Chart.js & Flowbite Datepicker -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.4.1/datepicker.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css">
+    
+    <!-- Alphine -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -152,7 +156,6 @@
                 <i class="fa-solid fa-receipt mr-3"></i> Rekap Transaksi
             </a>
         </nav>
-
         <!-- System Section -->
             <div class="px-2 mt-6 text-sm text-gray-400">
                 System

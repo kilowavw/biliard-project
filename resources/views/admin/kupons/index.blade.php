@@ -56,7 +56,7 @@
                     <th class="py-3 px-6 text-left">ID</th>
                     <th class="py-3 px-6 text-left">Kode Kupon</th>
                     <th class="py-3 px-6 text-left">Diskon (%)</th>
-                    <th class="py-3 px-6 text-left">Aktif</th>
+                    <th class="py-3 px-6 text-left">Status</th>
                     <th class="py-3 px-6 text-left">Kadaluarsa</th>
                     <th class="py-3 px-6 text-left">Dibuat Pada</th>
                     <th class="py-3 px-6 text-center">Aksi</th>
