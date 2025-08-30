@@ -1,105 +1,82 @@
-@extends('default')
-
-@section('title', 'Lampu Control')
-
-@section('content')
-<div class="container mx-auto p-4 md:p-6">
-<style>
-  h1 { color: #333; }
-  p { margin-top: 20px; font-size: 1.1em; }
-  .button {
-    display: inline-block;
-    background-color: #007bff;
-    color: white;
-    padding: 15px 30px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 20px;
-    margin: 10px;
-    text-decoration: none;
-    min-width: 150px;
-  }
-  .button.off { background-color: #dc3545; }
-  .button.on { background-color: #28a745; }
-  .button:hover { opacity: 0.9; }
-  #statusInfo { margin-top: 30px; padding: 15px; background-color: #e9e9e9; border-radius: 5px; text-align: left; }
-  #statusInfo p { margin: 5px 0; font-size: 0.95em; }
-</style>
-
-<div class="container">
-  <h1>Kontrol Lampu NodeMCU</h1>
-  <p>Status Lampu: <strong id="lampStatus">Memuat...</strong></p>
-  <button class="button on" onclick="controlLamp('on')">Turn ON</button>
-  <button class="button off" onclick="controlLamp('off')">Turn OFF</button>
-
-  <div id="statusInfo">
-    <p>NodeMCU IP: <span id="nodeMcuIp">Belum Terhubung</span></p>
-    <p>Koneksi WiFi: <span id="wifiConnectionStatus">Memuat...</span></p>
-    <p>Status Pembaruan: <span id="lastUpdated">N/A</span></p>
-  </div>
-</div>
-
-<script>
-  // --- GANTI INI DENGAN ALAMAT IP NodeMCU ANDA SETELAH TERHUBUNG KE WIFI ---
-  // Anda akan mendapatkan ini dari Serial Monitor NodeMCU setelah terhubung ke WiFi utama.
-  const NODE_MCU_IP = "192.168.1.XXX"; // <-- GANTI DENGAN IP ASLI NODE MCU ANDA
-
-  function controlLamp(state) {
-    if (NODE_MCU_IP === "192.168.1.XXX") {
-      alert("Harap ganti NODE_MCU_IP di JavaScript dengan alamat IP NodeMCU Anda!");
-      return;
-    }
-    fetch(`http://${NODE_MCU_IP}/lamp/${state}`)
-      .then(response => response.json())
-      .then(data => {
-        console.log("Kontrol Lampu Respon:", data);
-        updateStatus(); // Perbarui status setelah kontrol
-      })
-      .catch(error => {
-        console.error("Error mengontrol lampu:", error);
-        alert("Gagal mengontrol lampu. Pastikan NodeMCU terhubung dan IP benar.");
-      });
-  }
-
-  function updateStatus() {
-    if (NODE_MCU_IP === "192.168.1.XXX") {
-       document.getElementById('lampStatus').innerText = "IP NodeMCU Belum Disetel";
-       document.getElementById('wifiConnectionStatus').innerText = "Tidak Diketahui";
-       document.getElementById('nodeMcuIp').innerText = "N/A";
-       document.getElementById('lastUpdated').innerText = "Setel IP di JS!";
-       return;
-    }
-
-    fetch(`http://${NODE_MCU_IP}/status`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontrol Perangkat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        return response.json();
-      })
-      .then(data => {
-        console.log("Status NodeMCU:", data);
-        document.getElementById('lampStatus').innerText = data.lamp;
-        document.getElementById('wifiConnectionStatus').innerText = data.connected === "true" ? "Terhubung" : "Tidak Terhubung";
-        document.getElementById('nodeMcuIp').innerText = data.ip;
-        document.getElementById('lastUpdated').innerText = new Date().toLocaleTimeString();
-      })
-      .catch(error => {
-        console.error("Error mengambil status NodeMCU:", error);
-        document.getElementById('lampStatus').innerText = "Tidak Diketahui";
-        document.getElementById('wifiConnectionStatus').innerText = "Tidak Terhubung (Error Koneksi)";
-        document.getElementById('nodeMcuIp').innerText = "N/A";
-        document.getElementById('lastUpdated').innerText = "Gagal Update";
-      });
-  }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg w-full max-w-md card">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Kirim Perintah</h1>
+        
+        <form id="perintahForm" action="{{ url('/api/kirim-perintah') }}" method="POST">
+            @csrf
+            <div class="mb-6">
+                <label for="perintah" class="block text-gray-700 text-sm font-semibold mb-2">Masukkan Pesan/Perintah</label>
+                <input type="text" name="perintah" id="perintah" placeholder="ON / OFF / RESET" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-outline">
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                    Kirim Perintah
+                </button>
+            </div>
+        </form>
 
-  // Perbarui status saat halaman dimuat
-  updateStatus();
-  // Perbarui status setiap 3 detik
-  setInterval(updateStatus, 3000);
-</script>
-</div>
+        <div id="responseMessage" class="mt-4 text-center text-sm font-medium hidden"></div>
 
+    </div>
 
-@endsection
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('perintahForm');
+            const responseMessage = document.getElementById('responseMessage');
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault(); // Mencegah form dari pengiriman standar dan halaman reload
+
+                const formData = new FormData(form);
+                const perintah = formData.get('perintah');
+
+                // Siapkan data untuk dikirim dalam format JSON
+                const data = {
+                    perintah: perintah
+                };
+
+                // Kirim data ke API menggunakan Fetch API
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    // Tampilkan pesan respons dari server
+                    responseMessage.textContent = result.message;
+                    responseMessage.classList.remove('hidden');
+                    responseMessage.classList.add('text-green-500'); // Atur warna pesan sukses
+                    form.reset(); // Bersihkan form
+                })
+                .catch(error => {
+                    // Tangani kesalahan
+                    responseMessage.textContent = 'Terjadi kesalahan saat mengirim perintah.';
+                    responseMessage.classList.remove('hidden');
+                    responseMessage.classList.remove('text-green-500');
+                    responseMessage.classList.add('text-red-500'); // Atur warna pesan error
+                    console.error('Error:', error);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
