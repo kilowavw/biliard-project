@@ -2,74 +2,147 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Meja;
+use App\Models\Device;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class LampuController extends Controller
 {
-    // ... Metode index tidak berubah
     public function index()
     {
-        return view('lampu.index');
+        $meja = Meja::all();
+        $devices = Device::all();
+        return view('lampu.index', compact('meja', 'devices'));
     }
 
-    // Metode untuk menerima perintah dari web dan MENYIMPANNYA
     public function kirimPerintah(Request $request)
     {
-        $request->validate(['perintah' => 'required|string']);
+        $request->validate([
+            'device_name' => 'required|string|exists:devices,name',
+            // Tambahkan perintah LED ke daftar yang valid
+            'command' => 'required|string|in:RESET,UPDATE_FIRMWARE,NO_COMMAND,LED_ON,LED_OFF,LED_BLINK',
+        ]);
 
-        $perintah = $request->input('perintah');
+        $device = Device::where('name', $request->device_name)->first();
 
-        // Simpan pesan ke file teks sederhana
-        // Agar NodeMCU bisa mengambilnya nanti.
-        file_put_contents(storage_path('app/perintah.txt'), $perintah);
+        if (!$device) {
+            return response()->json(['status' => 'error', 'message' => 'Perangkat tidak ditemukan'], 404);
+        }
 
-        Log::info("Perintah baru diterima dan disimpan: '{$perintah}'");
+        $device->update([
+            'pending_command' => ($request->command === 'NO_COMMAND' ? null : $request->command),
+            'command_sent_at' => now(),
+            'command_executed_at' => null,
+        ]);
+
+        Log::info("Perintah '{$request->command}' berhasil dijadwalkan untuk perangkat: '{$request->device_name}'");
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Perintah berhasil dikirim ke server dan siap diambil oleh perangkat',
+            'message' => 'Perintah berhasil dijadwalkan untuk perangkat.',
         ]);
     }
 
-    // Metode BARU untuk diambil oleh NodeMCU (polling)
-    public function getPerintah()
+    public function getPerintahDanStatusMeja(Request $request)
     {
-        // Ambil pesan dari file teks yang disimpan
-        $perintah = file_exists(storage_path('app/perintah.txt'))
-                    ? file_get_contents(storage_path('app/perintah.txt'))
-                    : "Tidak ada perintah";
+        $request->validate([
+            'device_name' => 'required|string',
+            'ip_address' => 'nullable|string',
+            'command_executed' => 'nullable|string',
+        ]);
+
+        $device = Device::firstOrCreate(
+            ['name' => $request->device_name],
+            ['ip_address' => $request->ip_address]
+        );
+
+        $deviceDataToUpdate = [
+            'ip_address' => $request->ip_address,
+            'last_seen_at' => now(),
+        ];
+
+        if ($request->filled('command_executed') && $device->pending_command === $request->command_executed) {
+            $deviceDataToUpdate['command_executed_at'] = now();
+            $deviceDataToUpdate['pending_command'] = null;
+            Log::info("Perangkat '{$request->device_name}' berhasil mengeksekusi perintah: '{$request->command_executed}'");
+        }
+
+        $device->update($deviceDataToUpdate);
+
+        $mejaStatuses = Meja::all(['id', 'nama_meja', 'status'])
+                           ->map(function ($meja) {
+                               return [
+                                   'id' => $meja->id,
+                                   'nama_meja' => $meja->nama_meja,
+                                   'status' => $meja->status,
+                               ];
+                           });
+
+        $pendingCommand = null;
+        if ($device->pending_command && !$device->command_executed_at) {
+            $pendingCommand = $device->pending_command;
+        }
 
         return response()->json([
             'status' => 'success',
-            'perintah' => $perintah,
+            'meja_data' => $mejaStatuses,
+            'global_command' => $pendingCommand,
         ]);
     }
 
-    public function updateStatus(Request $request)
+    public function getDeviceStatus(Request $request)
     {
-        $request->validate(['status' => 'required|string|in:ON,OFF']);
+        $deviceName = $request->query('device_name');
+        if ($deviceName) {
+            $device = Device::where('name', $deviceName)->first();
+            if ($device) {
+                // Tentukan status online/offline berdasarkan last_seen_at
+                $onlineThresholdSeconds = 10; // Perangkat dianggap online jika terlihat dalam 10 detik terakhir
+                $isOnline = $device->last_seen_at && $device->last_seen_at->diffInSeconds(now()) < $onlineThresholdSeconds;
 
-        $status = $request->input('status');
+                $commandStatus = 'Tidak ada perintah';
+                if ($device->pending_command) {
+                    $commandStatus = 'Menunggu eksekusi: ' . $device->pending_command;
+                    if ($device->command_executed_at && $device->command_sent_at && $device->command_executed_at->greaterThan($device->command_sent_at)) {
+                        $commandStatus = 'Dieksekusi: ' . $device->pending_command . ' (' . $device->command_executed_at->diffForHumans() . ')';
+                    }
+                }
 
-        // Simpan status perangkat ke file teks sementara
-        file_put_contents(storage_path('app/perangkat_status.txt'), $status);
+                return response()->json([
+                    'status' => 'success',
+                    'device_name' => $device->name,
+                    'online' => $isOnline,
+                    'last_seen' => $device->last_seen_at ? $device->last_seen_at->diffForHumans() : 'Never', // Format yang lebih mudah dibaca
+                    'ip_address' => $device->ip_address,
+                    'command_status' => $commandStatus,
+                    'current_pending_command' => $device->pending_command,
+                ]);
+            }
+            return response()->json(['status' => 'error', 'message' => 'Perangkat tidak ditemukan'], 404);
+        }
 
-        Log::info("Status perangkat diperbarui: '{$status}'");
+        $devices = Device::all()->map(function ($device) {
+            $onlineThresholdSeconds = 10;
+            $isOnline = $device->last_seen_at && $device->last_seen_at->diffInSeconds(now()) < $onlineThresholdSeconds;
+            
+            $commandStatus = 'Tidak ada perintah';
+            if ($device->pending_command) {
+                $commandStatus = 'Menunggu eksekusi: ' . $device->pending_command;
+                if ($device->command_executed_at && $device->command_sent_at && $device->command_executed_at->greaterThan($device->command_sent_at)) {
+                    $commandStatus = 'Dieksekusi: ' . $device->pending_command . ' (' . $device->command_executed_at->diffForHumans() . ')';
+                }
+            }
+            return [
+                'device_name' => $device->name,
+                'online' => $isOnline,
+                'last_seen' => $device->last_seen_at ? $device->last_seen_at->diffForHumans() : 'Never',
+                'ip_address' => $device->ip_address,
+                'command_status' => $commandStatus,
+                'current_pending_command' => $device->pending_command,
+            ];
+        });
 
-        return response()->json(['success' => true]);
-    }
-
-    // Metode BARU untuk diambil oleh web (view)
-    public function getStatus()
-    {
-        $status = file_exists(storage_path('app/perangkat_status.txt'))
-                    ? file_get_contents(storage_path('app/perangkat_status.txt'))
-                    : "UNKNOWN"; // Status default jika file belum ada
-
-        return response()->json([
-            'status' => 'success',
-            'perangkat_status' => $status,
-        ]);
+        return response()->json(['status' => 'success', 'devices' => $devices]);
     }
 }

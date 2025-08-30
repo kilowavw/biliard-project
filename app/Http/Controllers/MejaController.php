@@ -84,6 +84,21 @@ class MejaController extends Controller
         }
     }
 
+    public function updateStatus(Request $request, Meja $meja)
+    {
+        $request->validate([
+            'status' => 'required|string|in:kosong,dipakai,waktu_habis', // Sesuaikan ENUM Anda
+        ]);
+
+        try {
+            $meja->update(['status' => $request->status]);
+            return response()->json(['message' => 'Status meja berhasil diperbarui.', 'status' => $meja->status]);
+        } catch (\Exception $e) {
+            Log::error("Gagal memperbarui status meja {$meja->id}: " . $e->getMessage());
+            return response()->json(['message' => 'Gagal memperbarui status meja.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
     /**
      * Remove the specified resource from storage.
      */

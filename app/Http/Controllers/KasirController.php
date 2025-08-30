@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon; // Untuk penanganan tanggal
+use Illuminate\Support\Facades\Log;
+
 
 class KasirController extends Controller
 {
@@ -256,9 +258,14 @@ class KasirController extends Controller
     public function getPenyewaanAktifJson()
     {
         $penyewaan = Penyewaan::with('meja', 'member') // Tambah with('member')
-            ->where('status', 'berlangsung')
-            ->get()
-            ->map(function ($item) {
+        ->where('status', 'berlangsung')
+        ->get()
+        ->map(function ($item) {
+            // Pengecekan waktu habis saat data diambil dari DB
+                if (!is_null($item->waktu_selesai) && $item->waktu_selesai->isPast() && $item->meja->status === 'dipakai') {
+                    $item->meja->update(['status' => 'waktu_habis']);
+                    Log::info("Meja {$item->meja->nama_meja} (ID: {$item->meja->id}) otomatis diubah menjadi 'waktu_habis'.");
+                }
                 return [
                     'id' => $item->id,
                     'meja_id' => (int)$item->meja_id,

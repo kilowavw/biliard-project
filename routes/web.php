@@ -110,7 +110,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Pemandu AREA (Mirip Kasir tapi tanpa pembayaran, hanya pesan dan tambah service)
    // Pemandu AREA (Semua fungsionalitas Kasir kecuali pembayaran)
-Route::middleware('role:pemandu|supervisor')->group(function () {
+Route::middleware('role:pemandu|admin|supervisor')->group(function () {
     Route::get('/pemandu', [PemanduController::class, 'dashboard'])->name('dashboard.pemandu');
 
     Route::post('/pemandu/pesan-durasi', [PemanduController::class, 'pesanDurasi'])->name('pemandu.pesanDurasi');
@@ -133,6 +133,7 @@ Route::middleware('role:pemandu|supervisor')->group(function () {
     // NEW: API untuk mendapatkan paket khusus member
     
     Route::get('/api/member/validate', [KasirController::class, 'validateMember'])->name('api.member.validate');
+    Route::post('/api/mejas/{meja}/update-status', [MejaController::class, 'updateStatus'])->name('api.mejas.updateStatus');
 
     
 // Member
@@ -143,8 +144,5 @@ Route::get('/cek-member', [MemberController::class, 'cekMember']);
 Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('laporan.harian');
 Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
 Route::get('/laporan/tahunan', [LaporanController::class, 'tahunan'])->name('laporan.tahunan');
-
-
-
 
 });

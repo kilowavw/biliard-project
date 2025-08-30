@@ -249,14 +249,80 @@
     };
 
     const handleTimeUpUI = (penyewaanData) => {
-        const mejaId = penyewaanData.meja_id; const actionsCont = document.querySelector(`#penyewaan-${mejaId} .flex-wrap`);
+        const mejaId = penyewaanData.meja_id;
+        const mejaCardEl = getEl(`meja-card-${mejaId}`); // Ambil elemen card meja
+        const statusMejaEl = mejaCardEl.querySelector(`#status-meja-${mejaId}`); // Ambil elemen status di card
+        const actionsCont = document.querySelector(`#penyewaan-${mejaId} .flex-wrap`);
+
+        // Perbarui status meja di UI
+        if (statusMejaEl) {
+            statusMejaEl.innerText = 'Status: waktu_habis';
+        }
+        // Perbarui class bg card (opsional, sesuaikan warna jika perlu)
+        if (mejaCardEl) {
+            mejaCardEl.classList.remove('bg-green-100', 'bg-neutral-600', 'bg-blue-100'); // Hapus semua background sebelumnya
+            // Kasir -> merah untuk waktu_habis
+            // Pemandu -> merah untuk waktu_habis
+            mejaCardEl.classList.add('bg-red-200'); // Atau warna lain yang Anda inginkan untuk 'waktu_habis'
+        }
+
         if (actionsCont) {
+            // Konten aksi disesuaikan, misalnya hanya tombol service dan status pembayaran
             actionsCont.innerHTML = `
+                @if(Auth::check() && Auth::user()->role == 'admin')
+                <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanData.id}, '${penyewaanData.meja_nama}');">
+                    <i class="fa-solid fa-trash"></i> Hapus
+                </button>
+                @elseif(Auth::check() && Auth::user()->role == 'supervisor')
+                <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanData.id}, '${penyewaanData.meja_nama}');">
+                    <i class="fa-solid fa-trash"></i> Hapus
+                </button>
+                @endif
                 <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanData.id});">
                     <i class="fa-solid fa-wine-bottle"></i> Tambah Service
                 </button>
-                <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran. (abaikan jika sepuasnya)</span>
+                <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran.</span>
+                @if(Request::is('kasir*')) {{-- Hanya tampil di dashboard kasir --}}
+                <button type="button" class="px-3 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600" onclick="event.preventDefault(); openPaymentModal(${penyewaanData.id});">
+                    <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
+                </button>
+                @endif
             `;
+        }
+
+        // Opsional: Kirim permintaan ke server untuk memperbarui status di database.
+        // Ini memastikan status 'waktu_habis' persisten meskipun halaman di-refresh.
+        // Namun, jika Anda ingin status ini hanya di frontend sampai pembayaran, Anda bisa lewati ini.
+        // Jika perlu, tambahkan rute dan metode controller baru untuk ini.
+        updateMejaStatusOnServer(mejaId, 'waktu_habis');
+
+        // Jika di Kasir, langsung buka modal pembayaran
+        @if(Request::is('kasir*'))
+            openPaymentModal(penyewaanData.id);
+        @endif
+    };
+
+    // Fungsi baru untuk memperbarui status meja di server (opsional, tapi disarankan)
+    const updateMejaStatusOnServer = async (mejaId, newStatus) => {
+        try {
+            // Anda perlu membuat rute dan metode controller baru untuk ini,
+            // misalnya: POST /api/mejas/{meja}/update-status
+            const res = await fetch(`/api/mejas/${mejaId}/update-status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                console.error('Gagal memperbarui status meja di server:', data.message);
+                Swal.fire('Error', 'Gagal memperbarui status meja di server: ' + (data.message || 'Terjadi kesalahan.'), 'error');
+            }
+        } catch (error) {
+            console.error('Error updating meja status on server:', error);
+            Swal.fire('Error', 'Terjadi kesalahan jaringan saat memperbarui status meja.', 'error');
         }
     };
 

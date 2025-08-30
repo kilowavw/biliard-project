@@ -19,10 +19,12 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-
 Route::post('/kirim-perintah', [LampuController::class, 'kirimPerintah']);
-Route::get('/get-perintah', [LampuController::class, 'getPerintah']);
+Route::get('/get-perintah-dan-status-meja', [LampuController::class, 'getPerintahDanStatusMeja']);
+Route::get('/get-device-status', [LampuController::class, 'getDeviceStatus']);
 
-// Route baru untuk status perangkat
-Route::post('/update-status', [LampuController::class, 'updateStatus']);
-Route::get('/get-status', [LampuController::class, 'getStatus']);
+Route::post('/meja/{meja}/update-status', function (Request $request, App\Models\Meja $meja) {
+    $request->validate(['status' => 'required|string|in:kosong,dipakai,waktu_habis']);
+    $meja->update(['status' => $request->status]);
+    return response()->json(['message' => 'Status meja berhasil diperbarui.']);
+});

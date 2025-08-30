@@ -69,8 +69,7 @@
                         <td class="py-3 px-6 text-left">
                             <span class="relative inline-block px-3 py-1 font-semibold leading-tight">
                                 <span aria-hidden class="absolute inset-0 opacity-50 rounded-full
-                                {{ $meja->status == 'kosong' ? 'bg-green-600' : ($meja->status == 'waktu_habis' ? 'bg-yellow-500' : 'bg-red-600') }}
-                            "></span>
+                                   {{ $meja->status == 'kosong' ? 'bg-green-600' : ($meja->status == 'waktu_habis' ? 'bg-yellow-500' : 'bg-red-600') }}"></span>
                                 <span class="relative">{{ ucfirst($meja->status) }}</span>
                             </span>
                         </td>

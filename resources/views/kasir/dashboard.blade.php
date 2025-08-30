@@ -4,6 +4,8 @@
 
 @section('content')
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
 <div class="container mx-auto p-4">
     <h1 class="text-2xl font-bold mb-4 text-black">Dashboard Kasir</h1>
 
@@ -12,26 +14,16 @@
                [@media(min-width:871px)_and_(max-width:1025px)]:grid-cols-3 lg:grid-cols-4 gap-4 text-black">
         @foreach ($mejas as $meja)
             <div id="meja-card-{{ $meja->id }}"
-                class="p-4 border rounded shadow cursor-pointer transition @if($meja->status === 'dipakai') bg-green-100 @else bg-neutral-600 @endif"
-                onclick="toggleDetail({{ $meja->id }})">
-                
+                class="p-4 border rounded shadow @if($meja->status === 'dipakai') bg-green-100 @else bg-neutral-600 @endif">
                 <h2 class="text-lg font-semibold">{{ $meja->nama_meja }}</h2>
                 <img src="{{ asset('gambar/Meja2.webp') }}" alt="Meja" width="200" class="mx-auto my-2">
                 <p id="status-meja-{{ $meja->id }}">Status: {{ $meja->status }}</p>
 
-                {{-- Detail (hidden by default) --}}
-                <div id="detail-{{ $meja->id }}" class="hidden mt-3 space-y-2" onclick="event.stopPropagation();">
-                    @if ($meja->status === 'kosong')
-                        <button id="btn-pesan-{{ $meja->id }}"
-                                onclick="event.stopPropagation(); openModal({{ $meja->id }})"
-                                class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none">
-                            Pesan
-                        </button>
-                    @else
-                        <p class="text-sm text-gray-700">Meja sedang dipakai</p>
-                    @endif
-                    <div id="penyewaan-{{ $meja->id }}"></div>
-                </div>
+                @if ($meja->status === 'kosong')
+                    <button id="btn-pesan-{{ $meja->id }}" onclick="openModal({{ $meja->id }})"
+                        class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Pesan</button>
+                @endif
+                <div id="penyewaan-{{ $meja->id }}"></div>
             </div>
         @endforeach
     </div>
@@ -310,11 +302,6 @@
                     <i class="fa-solid fa-trash"></i> Hapus
                 </button>
                 @endif
-                @if(Auth::check() && Auth::user()->role == 'supervisor')
-                <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanData.id}, '${penyewaanData.meja_nama}');">
-                    <i class="fa-solid fa-trash"></i> Hapus
-                </button>
-                @endif
                 <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanData.id});">
                     <i class="fa-solid fa-wine-bottle"></i> Tambah Service
                 </button>
@@ -394,13 +381,6 @@
                     `;
                     @endif
 
-                    @if(Auth::check() && (Auth::user()->role == 'admin' || Auth::user()->role == 'supervisor'))
-                        deleteButtonHtml = `
-                            <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanForThisMeja.id}, '${penyewaanForThisMeja.meja_nama}');">
-                                <i class="fa-solid fa-trash"></i> Hapus
-                            </button>
-                        `;
-                    @endif
                     if (isSepuasnya || isTimeUp) {
                         actionButtonsHtml = `
                             ${deleteButtonHtml}
@@ -704,7 +684,7 @@
         const isSepuasnyaCheckbox = getEl('is_sepuasnya');
         const durasiJamWrapper = getEl('durasi_jam_wrapper');
         const durasiJamInput = getEl('durasi_jam');
-        const paketDeskripsiPreview = getEl('paket_deskripsi_preview'); // Ini sudah ada
+        const paketDeskripsiPreview = getEl('paket_deskripsi_preview');
 
         if (selectedPaketId) {
             const selectedPaket = allAvailablePakets.find(p => p.id == selectedPaketId);
@@ -726,32 +706,19 @@
                 isSepuasnyaCheckbox.disabled = true;
                 durasiJamInput.disabled = true;
 
-                let descHtml = []; // Ubah menjadi array untuk HTML
-                if (isiPaket.harga_paket) descHtml.push(`<strong>Harga:</strong> ${fmtRp(isiPaket.harga_paket)}`);
+                let desc = [];
+                if (isiPaket.harga_paket) desc.push(`Harga: ${fmtRp(isiPaket.harga_paket)}`);
                 if (isiPaket.durasi_jam !== undefined) {
-                    if (isiPaket.durasi_jam > 0) descHtml.push(`<strong> Durasi:</strong> ${fmtDur(isiPaket.durasi_jam)}`);
-                    else descHtml.push(`<strong>Durasi:</strong> Main Sepuasnya`);
+                    if (isiPaket.durasi_jam > 0) desc.push(`Durasi: ${fmtDur(isiPaket.durasi_jam)}`);
+                    else desc.push(`Durasi: Main Sepuasnya`);
                 }
+                if (isiPaket.services && isiPaket.services.length > 0) desc.push(`Service: ${isiPaket.services.length} item`);
+                if (isiPaket.deskripsi_tambahan) desc.push(isiPaket.deskripsi_tambahan);
                 
-                // --- Bagian baru untuk detail service ---
-                if (isiPaket.services && isiPaket.services.length > 0) {
-                    let serviceListHtml = '<p class="mt-2 mb-1"><strong>Termasuk Layanan:</strong></p><ul class="list-disc list-inside ml-4">';
-                    isiPaket.services.forEach(s => {
-                        serviceListHtml += `<li>${s.nama} (${s.jumlah}x) - ${fmtRp(s.subtotal)}</li>`;
-                    });
-                    serviceListHtml += '</ul>';
-                    descHtml.push(serviceListHtml);
-                } else {
-                    descHtml.push('<p class="mt-2">Tidak ada layanan tambahan dalam paket ini.</p>');
-                }
-                // --- Akhir bagian baru ---
-
-                if (isiPaket.deskripsi_tambahan) descHtml.push(`<p class="mt-2"><strong>Deskripsi:</strong> ${isiPaket.deskripsi_tambahan}</p>`);
-                
-                paketDeskripsiPreview.innerHTML = descHtml.join(''); // Menggunakan innerHTML
+                paketDeskripsiPreview.innerText = desc.join(' | ');
                 paketDeskripsiPreview.style.display = 'block';
 
-                getEl('formPesan').action = '{{ route('pemandu.pesanPaket') }}';
+                getEl('formPesan').action = '{{ route('kasir.pesanPaket') }}';
 
             }
         } else {
@@ -764,12 +731,11 @@
             durasiJamInput.required = true;
 
             paketDeskripsiPreview.style.display = 'none';
-            paketDeskripsiPreview.innerHTML = ''; // Pastikan juga mengosongkan konten
 
-            getEl('formPesan').action = '{{ route('pemandu.pesanDurasi') }}';
+            getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}';
         }
     });
-    
+
     getEl('is_sepuasnya').addEventListener('change', function() {
         if (getEl('paket_id_select').value) return;
         const durasiWrapper = getEl('durasi_jam_wrapper');
@@ -891,7 +857,7 @@
     };
 
     const confirmDeletePenyewaan = async (penyewaanId, mejaNama) => {
-        if (userRole !== 'admin' && userRole !== 'supervisor') {
+        if (userRole !== 'admin') {
             Swal.fire({ icon: 'error', title: 'Akses Ditolak!', text: 'Penghapusan meja hanya bisa dilakukan oleh Supervisor.', confirmButtonText: 'OK' });
             return;
         }
@@ -933,27 +899,5 @@
         fetchAndRenderMejas();
         setInterval(fetchAndRenderMejas, 5000);
     });
-    let activeCardId = null;
-
-    function toggleDetail(mejaId) {
-        // Ambil elemen detail
-        const detailEl = document.getElementById(`detail-${mejaId}`);
-
-        if (activeCardId === mejaId) {
-            // Kalau klik card yg sama → toggle hide
-            detailEl.classList.toggle("hidden");
-            if (detailEl.classList.contains("hidden")) {
-                activeCardId = null;
-            }
-        } else {
-            // Tutup detail card lain
-            if (activeCardId !== null) {
-                document.getElementById(`detail-${activeCardId}`).classList.add("hidden");
-            }
-            // Tampilkan detail card yg diklik
-            detailEl.classList.remove("hidden");
-            activeCardId = mejaId;
-        }
-    }
 </script>
 @endsection
