@@ -11,7 +11,7 @@ class ProfilController extends Controller
         // Data Company Profile
         $data = [
             'company' => [
-                'nama' => 'Pusat Billiard Cimahi',
+                'nama' => 'CIMAHI BILLIARD CENTRE',
                 'tagline' => 'Tempat terbaik untuk bermain & bersantai',
                 'deskripsi' => 'PT Billiard Jaya adalah perusahaan yang bergerak di bidang pembuatan, penyewaan, dan distribusi meja billiard. 
                                 Dengan pengalaman lebih dari 10 tahun, kami selalu mengutamakan kualitas, desain elegan, serta pelayanan profesional.',
@@ -35,9 +35,11 @@ class ProfilController extends Controller
                 ],
             ],
             'images' => [
-                    'images/billiard_contoh1.png',
-                    'images/billiard_contoh2.png',
-                    'images/billiard_contoh3.png',
+                    'images/slider1.png',
+                    'images/slider2.png',
+                    'images/slider3.png',
+                    // 'images/slider4.png',
+
             ],
             'kontak' => [
                 'email' => 'info@billiardjaya.com',

@@ -21,31 +21,42 @@
     animation: fadeUp 0.8s ease forwards;
 }
 </style>
-
 <div class="text-white font-sans">
+  <section class="relative bg-cover bg-center bg-no-repeat" 
+         style="background-image: url('/images/slider1.png'); margin-top:0; padding-top:6rem; padding-bottom:6rem;">
+    <!-- Overlay biar lebih terang -->
+    <div class="absolute inset-0 bg-black bg-opacity-40"></div>
 
-  <!-- Hero Section -->
-<section class="text-center py-16">
-    <h2 class="text-4xl md:text-5xl font-bold mb-4 text-white opacity-0 translate-y-8 animate-fade-up" data-aos="fade-up">
-        Event Spesial Kami
-    </h2>
-    <p class="text-lg text-gray-300 max-w-2xl mx-auto mb-6 opacity-0 translate-y-8 animate-fade-up" data-aos="fade-up" data-aos-delay="200">
-        Ikuti berbagai event seru dan turnamen billiard dengan hadiah menarik.
-    </p>
-    <a href="javascript:void(0)" onclick="openCreate()"
-       class="mt-6 inline-block px-8 py-3 bg-gradient-to-r from-green-500 via-green-600 to-green-500 
-              text-white font-semibold rounded-xl shadow-lg transition-all duration-500 transform 
-              hover:scale-105 hover:shadow-2xl hover:from-green-600 hover:via-green-700 hover:to-green-600">
-        + Tambah Event
-    </a>
+    <div class="relative text-center text-white px-6 max-w-4xl mx-auto">
+        <h2 class="text-4xl md:text-5xl font-bold mb-4 opacity-0 translate-y-8 animate-fade-up" 
+            style="font-family: 'Bungee', Arial, sans-serif; font-weight: 400;" 
+            data-aos="fade-up">
+            Event Spesial Kami
+        </h2>
+
+        <p class="mt-6 text-xl md:text-2xl font-sans font-bold text-gray-100 tracking-normal leading-relaxed drop-shadow-lg opacity-0 translate-x-[40px]
+            animate-slideFromRight delay-200"
+           data-aos="fade-up" data-aos-delay="200">
+            Ikuti berbagai event seru dan turnamen billiard dengan hadiah menarik.
+        </p>
+
+        <a href="javascript:void(0)" onclick="openCreate()"
+           class="mt-6 inline-block px-8 py-3 bg-gradient-to-r from-green-500 via-green-600 to-green-500 
+                  text-white font-semibold rounded-xl shadow-lg transition-all duration-500 transform 
+                  hover:scale-105 hover:shadow-2xl hover:from-green-600 hover:via-green-700 hover:to-green-600">
+            + Tambah Event
+        </a>
+    </div>
 </section>
 
+
+
 <!-- Event Cards Premium + Scroll Animation -->
-<section id="event-list" class="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 justify-center max-w-6xl mx-auto px-6 pb-20">
+<section id="event-list" 
+    class="mt-10 grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 justify-center max-w-6xl mx-auto px-6 pb-20">
     @foreach($events as $event)
     <div data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}"
-         class="bg-gray-900 rounded-2xl border border-gray-700 overflow-hidden flex flex-col transition transform hover:scale-[1.04] hover:-translate-y-1 hover:shadow-2xl group relative mx-auto w-full max-w-md
-                hover:bg-gradient-to-r hover:from-green-700 hover:via-green-600 hover:to-green-500 duration-500">
+         class="bg-gray-900 rounded-2xl border border-gray-700 overflow-hidden flex flex-col transition transform hover:scale-[1.02] hover:shadow-lg group relative mx-auto w-full max-w-md">
         
         <!-- Gambar Event -->
         @if($event->gambar)
@@ -60,9 +71,16 @@
         <div class="p-6 flex flex-col flex-grow space-y-4 relative">
 
             <!-- Judul -->
-            <h3 class="text-2xl font-bold text-green-400 line-clamp-2 transition-all duration-300 group-hover:drop-shadow-lg">
+            <h3 class="text-2xl font-bold text-green-400 line-clamp-2 transition-all duration-300 group-hover:drop-shadow-md">
                 {{ $event->judul }}
             </h3>
+
+             <!-- Deskripsi -->
+            <p class="text-gray-100 text-base font-semibold leading-relaxed text-justify 
+                line-clamp-3 group-hover:line-clamp-none transition-all duration-500 whitespace-pre-line">
+                {{ $event->deskripsi }}
+            </p>
+
 
             <!-- Info Meta -->
             <div class="flex flex-col gap-2 text-gray-300 text-sm">
@@ -87,15 +105,16 @@
                 </div>
             </div>
 
-            <!-- Deskripsi -->
-            <p class="text-gray-200 text-sm leading-relaxed text-justify line-clamp-3 group-hover:line-clamp-none transition-all duration-500 whitespace-pre-line">
-                {{ $event->deskripsi }}
-            </p>
-
             <!-- Tombol Aksi -->
             <div class="mt-auto flex justify-end items-center gap-3 pt-3 border-t border-gray-700 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-                <button onclick="openEdit({{ $event->id }}, '{{ addslashes($event->judul) }}', '{{ addslashes($event->deskripsi) }}', '{{ $event->tanggal_mulai }}', '{{ $event->tanggal_selesai }}', '{{ addslashes($event->lokasi ?? '') }}')" 
-                        class="text-yellow-300 hover:text-yellow-100 text-sm font-medium transition">
+                <button onclick="openEdit({{ $event->id }}, 
+                    '{{ addslashes($event->judul) }}', 
+                    `{{ addslashes($event->deskripsi) }}`,
+                    '{{ $event->tanggal_mulai }}', 
+                    '{{ $event->tanggal_selesai }}', 
+                    '{{ addslashes($event->lokasi ?? '') }}'
+                    )" 
+                    class="text-yellow-300 hover:text-yellow-100 text-sm font-medium transition">
                     <i class="fas fa-edit"></i>
                 </button>
 
@@ -121,6 +140,7 @@
     </div>
     @endforeach
 </section>
+
 
 
 

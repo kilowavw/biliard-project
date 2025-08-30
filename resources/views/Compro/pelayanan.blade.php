@@ -3,26 +3,41 @@
 @section('content')
 <div class="container mx-auto mt-16 px-4 text-center">
 
-    <!-- Logo / Hiasan dengan Font Awesome -->
-    <div class="flex justify-center items-center mb-4 space-x-6 text-green-400 text-4xl">
-        <i class="fas fa-utensils"></i> <!-- Sendok & Garpu -->
-        <i class="fas fa-hamburger"></i> <!-- Makanan -->
-        <i class="fas fa-coffee"></i> <!-- Minuman -->
+   <!-- Section Daftar Pelayanan -->
+<section class="relative py-16 px-6 bg-cover bg-center bg-no-repeat" 
+    style="background-image: url('{{ asset('images/kantin2.jpeg') }}');">
+    
+    <!-- Overlay gelap biar teks lebih jelas -->
+    <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+    
+    <div class="relative z-10 max-w-5xl mx-auto text-center">
+        
+        <!-- Logo / Icon -->
+        <div class="flex justify-center items-center mb-6 space-x-8 text-green-400 text-5xl">
+            <i class="fas fa-utensils drop-shadow-lg"></i>
+            <i class="fas fa-hamburger drop-shadow-lg"></i>
+            <i class="fas fa-coffee drop-shadow-lg"></i>
+        </div>
+
+        <!-- Decorative Line -->
+        <div class="h-1 w-28 bg-green-400 mx-auto mb-6 rounded-full shadow-lg"></div>
+
+        <!-- Judul -->
+        <h2 class="text-4xl md:text-5xl font-extrabold text-green-400 mb-10 tracking-wide drop-shadow-lg">
+            Daftar Pelayanan
+        </h2>
+
+        <!-- Button Tambah Pelayanan -->
+        <div class="mb-8">
+            <button 
+                class="bg-green-400 text-gray-900 px-8 py-3 rounded-full hover:bg-green-300 
+                       transition shadow-xl font-semibold uppercase tracking-wider">
+                Tambah Pelayanan
+            </button>
+        </div>
     </div>
+</section>
 
-    <!-- Decorative Line -->
-    <div class="h-1 w-24 bg-green-400 mx-auto mb-4 rounded"></div>
-
-    <h2 class="text-3xl md:text-4xl font-extrabold text-center text-green-400 mb-10 tracking-wide">Daftar Pelayanan</h2>
-
-    <!-- Button Tambah Pelayanan -->
-    <div class="text-center mb-8">
-        <button 
-            class="bg-green-400 text-gray-900 px-6 py-2 rounded-full hover:bg-green-300 transition shadow-md font-semibold uppercase tracking-wider"
-            onclick="openModal('tambahModal')">
-            Tambah Pelayanan
-        </button>
-    </div>
 
     {{-- Notifikasi --}}
     @if(session('success'))
