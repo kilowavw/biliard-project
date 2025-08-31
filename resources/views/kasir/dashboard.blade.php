@@ -14,16 +14,26 @@
                [@media(min-width:871px)_and_(max-width:1025px)]:grid-cols-3 lg:grid-cols-4 gap-4 text-black">
         @foreach ($mejas as $meja)
             <div id="meja-card-{{ $meja->id }}"
-                class="p-4 border rounded shadow @if($meja->status === 'dipakai') bg-green-100 @else bg-neutral-600 @endif">
+                class="p-4 border rounded shadow cursor-pointer transition @if($meja->status === 'dipakai') bg-green-100 @else bg-neutral-600 @endif"
+                onclick="toggleDetail({{ $meja->id }})">
+                
                 <h2 class="text-lg font-semibold">{{ $meja->nama_meja }}</h2>
                 <img src="{{ asset('gambar/Meja2.webp') }}" alt="Meja" width="200" class="mx-auto my-2">
                 <p id="status-meja-{{ $meja->id }}">Status: {{ $meja->status }}</p>
 
-                @if ($meja->status === 'kosong')
-                    <button id="btn-pesan-{{ $meja->id }}" onclick="openModal({{ $meja->id }})"
-                        class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Pesan</button>
-                @endif
-                <div id="penyewaan-{{ $meja->id }}"></div>
+                {{-- Detail (hidden by default) --}}
+                <div id="detail-{{ $meja->id }}" class="hidden mt-3 space-y-2" onclick="event.stopPropagation();">
+                    @if ($meja->status === 'kosong')
+                        <button id="btn-pesan-{{ $meja->id }}"
+                                onclick="event.stopPropagation(); openModal({{ $meja->id }})"
+                                class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none">
+                            Pesan
+                        </button>
+                    @else
+                        <p class="text-sm text-gray-700">Meja sedang dipakai</p>
+                    @endif
+                    <div id="penyewaan-{{ $meja->id }}"></div>
+                </div>
             </div>
         @endforeach
     </div>
@@ -899,5 +909,27 @@
         fetchAndRenderMejas();
         setInterval(fetchAndRenderMejas, 5000);
     });
+    let activeCardId = null;
+
+    function toggleDetail(mejaId) {
+        // Ambil elemen detail
+        const detailEl = document.getElementById(`detail-${mejaId}`);
+
+        if (activeCardId === mejaId) {
+            // Kalau klik card yg sama → toggle hide
+            detailEl.classList.toggle("hidden");
+            if (detailEl.classList.contains("hidden")) {
+                activeCardId = null;
+            }
+        } else {
+            // Tutup detail card lain
+            if (activeCardId !== null) {
+                document.getElementById(`detail-${activeCardId}`).classList.add("hidden");
+            }
+            // Tampilkan detail card yg diklik
+            detailEl.classList.remove("hidden");
+            activeCardId = mejaId;
+        }
+    }
 </script>
 @endsection
