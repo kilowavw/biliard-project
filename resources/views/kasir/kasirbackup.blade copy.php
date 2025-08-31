@@ -867,10 +867,6 @@
     };
 
     const confirmDeletePenyewaan = async (penyewaanId, mejaNama) => {
-        if (userRole !== 'admin') {
-            Swal.fire({ icon: 'error', title: 'Akses Ditolak!', text: 'Penghapusan meja hanya bisa dilakukan oleh Supervisor.', confirmButtonText: 'OK' });
-            return;
-        }
 
         Swal.fire({
             title: 'Yakin menghapus penyewaan?',

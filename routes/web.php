@@ -24,7 +24,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
     Route::post('/register', [LoginController::class, 'register'])->name('register');
-    Route::get('/control', [LampuController::class, 'index'])->name('lampu.index');
+   
 });
 
 Route::resource('events', EventController::class);
@@ -145,4 +145,5 @@ Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('lapor
 Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
 Route::get('/laporan/tahunan', [LaporanController::class, 'tahunan'])->name('laporan.tahunan');
 
+Route::get('/control', [LampuController::class, 'index'])->name('lampu.index');
 });

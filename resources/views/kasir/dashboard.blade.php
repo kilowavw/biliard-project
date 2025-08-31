@@ -4,7 +4,6 @@
 
 @section('content')
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
 <div class="container mx-auto p-4">
     <h1 class="text-2xl font-bold mb-4 text-black">Dashboard Kasir</h1>
@@ -312,6 +311,11 @@
                     <i class="fa-solid fa-trash"></i> Hapus
                 </button>
                 @endif
+                @if(Auth::check() && Auth::user()->role == 'supervisor')
+                <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanData.id}, '${penyewaanData.meja_nama}');">
+                    <i class="fa-solid fa-trash"></i> Hapus
+                </button>
+                @endif
                 <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanData.id});">
                     <i class="fa-solid fa-wine-bottle"></i> Tambah Service
                 </button>
@@ -391,6 +395,14 @@
                     `;
                     @endif
 
+                    @if(Auth::check() && Auth::user()->role == 'supervisor')
+                    deleteButtonHtml = `
+                        <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanForThisMeja.id}, '${penyewaanForThisMeja.meja_nama}');">
+                            <i class="fa-solid fa-trash"></i> Hapus
+                        </button>
+                    `;
+                    @endif
+
                     if (isSepuasnya || isTimeUp) {
                         actionButtonsHtml = `
                             ${deleteButtonHtml}
@@ -454,7 +466,7 @@
 
                     if (penyewaanDivEl) {
                         penyewaanDivEl.innerHTML = `
-                            <div class="mt-3 bg-white rounded-lg shadow-sm p-3 border border-red-300">
+                            <div class="mt-3 bg-white rounded-lg shadow-sm p-3 border border-blue-300">
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <p class="text-sm font-semibold text-gray-700"><i class="fa-solid fa-user"></i> ${penyewaanForThisMeja.nama_penyewa}</p>
@@ -463,8 +475,8 @@
                                         <p class="text-xs text-gray-500"><i class="fa-solid fa-hourglass-half"></i> Durasi: ${isSepuasnya ? 'Main Sepuasnya' : fmtDur(penyewaanForThisMeja.durasi_jam)}</p>
                                     </div>
                                     <div class="text-right">
-                                        <span class="inline-block bg-red-100 text-red-700 text-xs font-semibold px-2 py-1 rounded-full">DIPAKAI</span>
-                                        <p class="text-sm font-bold text-red-700 mt-1">${timerDisplay}</p>
+                                        <span class="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">DIPAKAI</span>
+                                        <p class="text-sm font-bold text-blue-700 mt-1">${timerDisplay}</p>
                                     </div>
                                 </div>
                                 ${serviceDetailHtml}
@@ -475,7 +487,7 @@
                         if (timerEl) {
                             if (isSepuasnya) startRunningTimer(timerEl, penyewaanForThisMeja.waktu_mulai, penyewaanForThisMeja);
                             else if (penyewaanForThisMeja.status === 'berlangsung' && !isTimeUp) startCountdown(timerEl, penyewaanForThisMeja.waktu_selesai, penyewaanForThisMeja);
-                            else if (isTimeUp) { timerEl.innerText = 'Waktu habis!'; timerEl.classList.add('text-red-700','font-bold'); }
+                            else if (isTimeUp) { timerEl.innerText = 'Waktu habis!'; timerEl.classList.add('text-blue-700','font-bold'); }
                         }
                     }
                 } else {
@@ -688,7 +700,7 @@
         }
     }, 500)); // Debounce untuk mencegah terlalu banyak request
 
-    getEl('paket_id_select').addEventListener('change', function() {
+       getEl('paket_id_select').addEventListener('change', function() {
         const selectedPaketId = this.value;
         const nonPaketOptionsDiv = getEl('non_paket_options');
         const isSepuasnyaCheckbox = getEl('is_sepuasnya');
@@ -701,6 +713,7 @@
             if (selectedPaket) {
                 const isiPaket = selectedPaket.isi_paket;
 
+                // Reset dan atur field durasi/sepuasnya
                 if (isiPaket.durasi_jam === 0) {
                     isSepuasnyaCheckbox.checked = true;
                     durasiJamWrapper.style.display = 'none';
@@ -716,22 +729,43 @@
                 isSepuasnyaCheckbox.disabled = true;
                 durasiJamInput.disabled = true;
 
-                let desc = [];
-                if (isiPaket.harga_paket) desc.push(`Harga: ${fmtRp(isiPaket.harga_paket)}`);
+                let descHtml = []; 
+
+                // Tambahkan harga dan durasi
+                if (isiPaket.harga_paket) descHtml.push(`<p><strong>Harga:</strong> ${fmtRp(isiPaket.harga_paket)}</p>`);
                 if (isiPaket.durasi_jam !== undefined) {
-                    if (isiPaket.durasi_jam > 0) desc.push(`Durasi: ${fmtDur(isiPaket.durasi_jam)}`);
-                    else desc.push(`Durasi: Main Sepuasnya`);
+                    if (isiPaket.durasi_jam > 0) descHtml.push(`<p><strong>Durasi:</strong> ${fmtDur(isiPaket.durasi_jam)}</p>`);
+                    else descHtml.push(`<p><strong>Durasi:</strong> Main Sepuasnya</p>`);
                 }
-                if (isiPaket.services && isiPaket.services.length > 0) desc.push(`Service: ${isiPaket.services.length} item`);
-                if (isiPaket.deskripsi_tambahan) desc.push(isiPaket.deskripsi_tambahan);
                 
-                paketDeskripsiPreview.innerText = desc.join(' | ');
+                // --- BAGIAN BARU: Deskripsi Tambahan DULU, lalu Layanan ---
+                if (isiPaket.deskripsi_tambahan) {
+                    descHtml.push(`<p class="mt-2"><strong>Deskripsi Paket:</strong> ${isiPaket.deskripsi_tambahan}</p>`);
+                }
+
+                if (isiPaket.services && isiPaket.services.length > 0) {
+                    let serviceListHtml = '<p class="mt-2 mb-1"><strong>Termasuk Layanan:</strong></p><ul class="list-disc list-inside ml-4 text-gray-600">';
+                    isiPaket.services.forEach(s => {
+                        const serviceName = s.nama || 'Nama Service Tidak Diketahui';
+                        const serviceCount = s.jumlah || 0;
+                        const serviceSubtotal = fmtRp(s.subtotal || 0);
+                        serviceListHtml += `<li>${serviceName} (${serviceCount}x) - ${serviceSubtotal}</li>`;
+                    });
+                    serviceListHtml += '</ul>';
+                    descHtml.push(serviceListHtml);
+                } else {
+                    descHtml.push('<p class="mt-2 text-gray-600">Tidak ada layanan tambahan dalam paket ini.</p>');
+                }
+                // --- AKHIR BAGIAN BARU ---
+                
+                paketDeskripsiPreview.innerHTML = descHtml.join('');
                 paketDeskripsiPreview.style.display = 'block';
 
                 getEl('formPesan').action = '{{ route('kasir.pesanPaket') }}';
 
             }
         } else {
+            // Logika reset form jika tidak ada paket yang dipilih
             nonPaketOptionsDiv.style.display = 'block';
             isSepuasnyaCheckbox.disabled = false;
             durasiJamInput.disabled = false;
@@ -741,27 +775,8 @@
             durasiJamInput.required = true;
 
             paketDeskripsiPreview.style.display = 'none';
+            paketDeskripsiPreview.innerHTML = '';
 
-            getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}';
-        }
-    });
-
-    getEl('is_sepuasnya').addEventListener('change', function() {
-        if (getEl('paket_id_select').value) return;
-        const durasiWrapper = getEl('durasi_jam_wrapper');
-        const durasiInput = getEl('durasi_jam');
-        const paketSelect = getEl('paket_id_select');
-
-        if (this.checked) {
-            durasiWrapper.style.display = 'none';
-            durasiInput.removeAttribute('required');
-            durasiInput.value = '';
-            paketSelect.style.display = 'none'; // Hide package field when "Main Sepuasnya" is checked
-            getEl('formPesan').action = '{{ route('kasir.pesanSepuasnya') }}';
-        } else {
-            durasiWrapper.style.display = 'block';
-            durasiInput.setAttribute('required', 'required');
-            paketSelect.style.display = 'block'; // Show package field when unchecked
             getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}';
         }
     });
