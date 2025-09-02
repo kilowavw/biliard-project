@@ -131,8 +131,7 @@ class LampuController extends Controller
                 $isOnline = 'online';
             } else {
                 $isOnline = 'offline';
-            }
-            
+            }            
             
             $commandStatus = 'Tidak ada perintah';
             if ($device->pending_command) {
