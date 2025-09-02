@@ -54,8 +54,9 @@ class LampuController extends Controller
 
         $device = Device::firstOrCreate(
             ['name' => $request->device_name],
-            ['ip_address' => $request->ip_address]
+            ['ip_address' => $request->ip_address, 'last_seen_at' => null] // jangan otomatis isi sekarang
         );
+        
 
         $deviceDataToUpdate = [
             'ip_address' => $request->ip_address,
@@ -124,7 +125,14 @@ class LampuController extends Controller
 
         $devices = Device::all()->map(function ($device) {
             $onlineThresholdSeconds = 10;
-            $isOnline = $device->last_seen_at && $device->last_seen_at->diffInSeconds(now()) < $onlineThresholdSeconds;
+            if (!$device->last_seen_at) {
+                $isOnline = 'never_seen';
+            } elseif ($device->last_seen_at->greaterThan(now()->subSeconds($onlineThresholdSeconds))) {
+                $isOnline = 'online';
+            } else {
+                $isOnline = 'offline';
+            }
+            
             
             $commandStatus = 'Tidak ada perintah';
             if ($device->pending_command) {
