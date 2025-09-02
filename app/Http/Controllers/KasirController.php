@@ -8,14 +8,13 @@ use App\Models\HargaSetting;
 use App\Models\Kupon;
 use App\Models\Service;
 use App\Models\Paket;
-use App\Models\Member; // Import model Member
+use App\Models\Member;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon; // Untuk penanganan tanggal
-use Illuminate\Support\Facades\Log;
-
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log; // Pastikan ini ada
 
 class KasirController extends Controller
 {
@@ -25,7 +24,6 @@ class KasirController extends Controller
         $penyewaanAktif = Penyewaan::where('status', 'berlangsung')->get();
         $userRole = Auth::user() ? Auth::user()->role : 'guest';
 
-        // Mengambil semua paket aktif, akan difilter di JS
         $activePakets = Paket::where('aktif', true)->orderBy('nama_paket')->get();
 
         return view('kasir.dashboard', compact('mejas', 'penyewaanAktif', 'userRole', 'activePakets'))
@@ -34,234 +32,262 @@ class KasirController extends Controller
 
     public function pesanDurasi(Request $request)
     {
-        $request->validate([
-            'meja_id' => 'required|exists:mejas,id',
-            'nama_penyewa' => 'required|string|max:255',
-            'durasi_jam' => 'required|numeric|min:0.01',
-            'kode_member' => 'nullable|string|max:255', // Tambah validasi kode member
-        ]);
-
-        $hargaSetting = HargaSetting::latest()->first();
-        $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
-
-        $diskonMember = 0;
-        $memberId = null;
-
-        if ($request->filled('kode_member')) {
-            $member = Member::where('kode_member', $request->kode_member)
-                            ->where('status_keanggotaan', 'Aktif')
-                            ->where('tanggal_kadaluarsa', '>=', now())
-                            ->first();
-            if ($member) {
-                $diskonMember = $member->diskon_persen;
-                $memberId = $member->id;
-            } else {
-                return back()->with('error', 'Kode Member tidak valid atau sudah kadaluarsa.')->withInput();
-            }
-        }
-
-        Penyewaan::create([
-            'meja_id'         => $request->meja_id,
-            'nama_penyewa'    => $request->nama_penyewa,
-            'durasi_jam'      => $request->durasi_jam,
-            'harga_per_jam'   => $hargaPerJam,
-            'kode_kupon'      => null, // Kupon diterapkan saat pembayaran
-            'diskon_persen'   => 0, // Diskon dari kupon, bukan member. Member diskon dihitung pada total
-            'total_service'   => 0,
-            'service_detail'  => '[]',
-            'total_bayar'     => null,
-            'waktu_mulai'     => now(),
-            'waktu_selesai'   => now()->addMinutes($request->durasi_jam * 60),
-            'status'          => 'berlangsung',
-            'kasir_id'        => Auth::id(),
-            'member_id'       => $memberId,        // Simpan ID member
-            'diskon_member_persen' => $diskonMember, // Simpan persentase diskon member
-            'paket_id'        => null,
-        ]);
-
-        Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
-
-        return redirect()->route('dashboard.kasir')->with('success', 'Penyewaan durasi tetap dimulai.');
-    }
-
-    public function pesanSepuasnya(Request $request)
-    {
-        $request->validate([
-            'meja_id' => 'required|exists:mejas,id',
-            'nama_penyewa' => 'required|string|max:255',
-            'kode_member' => 'nullable|string|max:255', // Tambah validasi kode member
-        ]);
-
-        $hargaSetting = HargaSetting::latest()->first();
-        $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
-
-        $diskonMember = 0;
-        $memberId = null;
-
-        if ($request->filled('kode_member')) {
-            $member = Member::where('kode_member', $request->kode_member)
-                            ->where('status_keanggotaan', 'Aktif')
-                            ->where('tanggal_kadaluarsa', '>=', now())
-                            ->first();
-            if ($member) {
-                $diskonMember = $member->diskon_persen;
-                $memberId = $member->id;
-            } else {
-                return back()->with('error', 'Kode Member tidak valid atau sudah kadaluarsa.')->withInput();
-            }
-        }
-
-        Penyewaan::create([
-            'meja_id'         => $request->meja_id,
-            'nama_penyewa'    => $request->nama_penyewa,
-            'durasi_jam'      => 0,
-            'harga_per_jam'   => $hargaPerJam,
-            'kode_kupon'      => null,
-            'diskon_persen'   => 0,
-            'total_service'   => 0,
-            'service_detail'  => '[]',
-            'total_bayar'     => null,
-            'waktu_mulai'     => now(),
-            'waktu_selesai'   => null,
-            'status'          => 'berlangsung',
-            'kasir_id'        => Auth::id(),
-            'is_sepuasnya'    => true,
-            'member_id'       => $memberId,        // Simpan ID member
-            'diskon_member_persen' => $diskonMember, // Simpan persentase diskon member
-            'paket_id'        => null,
-        ]);
-
-        Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
-
-        return redirect()->route('dashboard.kasir')->with('success', 'Penyewaan "Main Sepuasnya" dimulai.');
-    }
-
-    public function pesanPaket(Request $request)
-    {
-        $request->validate([
-            'meja_id' => 'required|exists:mejas,id',
-            'nama_penyewa' => 'required|string|max:255',
-            'paket_id' => 'required|exists:pakets,id',
-            'kode_member' => 'nullable|string|max:255', // Tambah validasi kode member
-        ]);
-
-        $paket = Paket::find($request->paket_id);
-        if (!$paket || !$paket->aktif) {
-            throw ValidationException::withMessages([
-                'paket_id' => 'Paket tidak ditemukan atau tidak aktif.'
-            ]);
-        }
-
-        $paketDetails = $paket->isi_paket;
-
-        if (!isset($paketDetails['harga_paket']) || !isset($paketDetails['durasi_jam']) || !isset($paketDetails['services'])) {
-            throw ValidationException::withMessages([
-                'paket_id' => 'Struktur detail paket tidak valid.'
-            ]);
-        }
-
-        $durasiJam = (float)$paketDetails['durasi_jam'];
-        $hargaPokokSewa = (float)$paketDetails['harga_paket'];
-        $waktuSelesai = $durasiJam === 0.0 ? null : now()->addMinutes($durasiJam * 60);
-
-        $totalServicePaket = 0;
-        $serviceDetailPaket = [];
-        $servicesToDecrement = [];
-
-        if (is_array($paketDetails['services'])) {
-            foreach ($paketDetails['services'] as $srv) {
-                if (isset($srv['id']) && isset($srv['nama']) && isset($srv['jumlah']) && isset($srv['subtotal'])) {
-                    $serviceDetailPaket[] = [
-                        'id' => (int)$srv['id'],
-                        'nama' => $srv['nama'],
-                        'jumlah' => (int)$srv['jumlah'],
-                        'subtotal' => (float)$srv['subtotal'],
-                    ];
-                    $totalServicePaket += (float)$srv['subtotal'];
-                    $servicesToDecrement[] = ['id' => (int)$srv['id'], 'jumlah' => (int)$srv['jumlah'], 'nama' => $srv['nama']];
-                }
-            }
-        }
-
-        $diskonMember = 0;
-        $memberId = null;
-
-        if ($request->filled('kode_member')) {
-            $member = Member::where('kode_member', $request->kode_member)
-                            ->where('status_keanggotaan', 'Aktif')
-                            ->where('tanggal_kadaluarsa', '>=', now())
-                            ->first();
-            if ($member) {
-                $diskonMember = $member->diskon_persen;
-                $memberId = $member->id;
-            } else {
-                return back()->with('error', 'Kode Member tidak valid atau sudah kadaluarsa.')->withInput();
-            }
-        }
-
-        DB::beginTransaction();
         try {
-            foreach ($servicesToDecrement as $srvItem) {
-                $service = Service::lockForUpdate()->find($srvItem['id']);
-                if (!$service) {
-                    DB::rollBack();
-                    throw ValidationException::withMessages([
-                        'paket_id' => "Service '{$srvItem['nama']}' dalam paket tidak ditemukan."
-                    ]);
+            $request->validate([
+                'meja_id' => 'required|exists:mejas,id',
+                'nama_penyewa' => 'required|string|max:255',
+                'durasi_jam' => 'required|numeric|min:0.01',
+                'kode_member' => 'nullable|string|max:255',
+            ]);
+
+            $hargaSetting = HargaSetting::latest()->first();
+            $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
+
+            $diskonMember = 0;
+            $memberId = null;
+
+            if ($request->filled('kode_member')) {
+                $member = Member::where('kode_member', $request->kode_member)
+                                ->where('status_keanggotaan', 'Aktif')
+                                ->where('tanggal_kadaluarsa', '>=', now())
+                                ->first();
+                if ($member) {
+                    $diskonMember = $member->diskon_persen;
+                    $memberId = $member->id;
+                } else {
+                    // Jika member tidak valid, kembalikan JSON error
+                    return response()->json(['message' => 'Kode Member tidak valid atau sudah kadaluarsa.', 'success' => false], 400);
                 }
-                if ($service->stok < $srvItem['jumlah']) {
-                    DB::rollBack();
-                    throw ValidationException::withMessages([
-                        'paket_id' => "Stok {$service->nama} kurang untuk paket. Tersedia: {$service->stok}"
-                    ]);
-                }
-                $service->decrement('stok', $srvItem['jumlah']);
             }
 
             Penyewaan::create([
                 'meja_id'         => $request->meja_id,
                 'nama_penyewa'    => $request->nama_penyewa,
-                'durasi_jam'      => $durasiJam,
-                'harga_per_jam'   => $hargaPokokSewa,
+                'durasi_jam'      => $request->durasi_jam,
+                'harga_per_jam'   => $hargaPerJam,
                 'kode_kupon'      => null,
                 'diskon_persen'   => 0,
-                'total_service'   => $totalServicePaket,
-                'service_detail'  => json_encode($serviceDetailPaket),
+                'total_service'   => 0,
+                'service_detail'  => '[]',
                 'total_bayar'     => null,
                 'waktu_mulai'     => now(),
-                'waktu_selesai'   => $waktuSelesai,
+                'waktu_selesai'   => now()->addMinutes($request->durasi_jam * 60),
                 'status'          => 'berlangsung',
                 'kasir_id'        => Auth::id(),
-                'paket_id'        => $request->paket_id,
-                'is_sepuasnya'    => ($durasiJam === 0.0),
-                'member_id'       => $memberId,        // Simpan ID member
-                'diskon_member_persen' => $diskonMember, // Simpan persentase diskon member
+                'member_id'       => $memberId,
+                'diskon_member_persen' => $diskonMember,
+                'paket_id'        => null,
             ]);
 
             Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
 
-            DB::commit();
-
-            return redirect()->route('dashboard.kasir')->with('success', "Penyewaan dengan paket '{$paket->nama_paket}' dimulai.");
+            return response()->json(['message' => 'Penyewaan durasi tetap dimulai.', 'success' => true], 200);
 
         } catch (ValidationException $e) {
-            DB::rollBack();
-            return back()->withErrors($e->errors())->withInput();
+            // Tangani error validasi
+            return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Error booking package: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Gagal memulai penyewaan paket. Silakan coba lagi.');
+            // Tangani error umum lainnya
+            Log::error('Error pesan durasi by Kasir: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal memulai penyewaan durasi. Silakan coba lagi.', 'success' => false], 500);
+        }
+    }
+
+    public function pesanSepuasnya(Request $request)
+    {
+        try {
+            $request->validate([
+                'meja_id' => 'required|exists:mejas,id',
+                'nama_penyewa' => 'required|string|max:255',
+                'kode_member' => 'nullable|string|max:255',
+            ]);
+
+            $hargaSetting = HargaSetting::latest()->first();
+            $hargaPerJam = $hargaSetting ? $hargaSetting->harga_per_jam : 0;
+
+            $diskonMember = 0;
+            $memberId = null;
+
+            if ($request->filled('kode_member')) {
+                $member = Member::where('kode_member', $request->kode_member)
+                                ->where('status_keanggotaan', 'Aktif')
+                                ->where('tanggal_kadaluarsa', '>=', now())
+                                ->first();
+                if ($member) {
+                    $diskonMember = $member->diskon_persen;
+                    $memberId = $member->id;
+                } else {
+                    return response()->json(['message' => 'Kode Member tidak valid atau sudah kadaluarsa.', 'success' => false], 400);
+                }
+            }
+
+            Penyewaan::create([
+                'meja_id'         => $request->meja_id,
+                'nama_penyewa'    => $request->nama_penyewa,
+                'durasi_jam'      => 0,
+                'harga_per_jam'   => $hargaPerJam,
+                'kode_kupon'      => null,
+                'diskon_persen'   => 0,
+                'total_service'   => 0,
+                'service_detail'  => '[]',
+                'total_bayar'     => null,
+                'waktu_mulai'     => now(),
+                'waktu_selesai'   => null,
+                'status'          => 'berlangsung',
+                'kasir_id'        => Auth::id(),
+                'is_sepuasnya'    => true,
+                'member_id'       => $memberId,
+                'diskon_member_persen' => $diskonMember,
+                'paket_id'        => null,
+            ]);
+
+            Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
+
+            return response()->json(['message' => 'Penyewaan "Main Sepuasnya" dimulai.', 'success' => true], 200);
+
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
+        } catch (\Exception $e) {
+            Log::error('Error pesan sepuasnya by Kasir: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal memulai penyewaan "Main Sepuasnya". Silakan coba lagi.', 'success' => false], 500);
+        }
+    }
+
+    public function pesanPaket(Request $request)
+    {
+        try {
+            $request->validate([
+                'meja_id' => 'required|exists:mejas,id',
+                'nama_penyewa' => 'required|string|max:255',
+                'paket_id' => 'required|exists:pakets,id',
+                'kode_member' => 'nullable|string|max:255',
+            ]);
+
+            $paket = Paket::find($request->paket_id);
+            if (!$paket || !$paket->aktif) {
+                throw ValidationException::withMessages([
+                    'paket_id' => 'Paket tidak ditemukan atau tidak aktif.'
+                ]);
+            }
+
+            $paketDetails = $paket->isi_paket;
+
+            if (!isset($paketDetails['harga_paket']) || !isset($paketDetails['durasi_jam']) || !isset($paketDetails['services'])) {
+                throw ValidationException::withMessages([
+                    'paket_id' => 'Struktur detail paket tidak valid.'
+                ]);
+            }
+
+            $durasiJam = (float)$paketDetails['durasi_jam'];
+            $hargaPokokSewa = (float)$paketDetails['harga_paket'];
+            $waktuSelesai = $durasiJam === 0.0 ? null : now()->addMinutes($durasiJam * 60);
+
+            $totalServicePaket = 0;
+            $serviceDetailPaket = [];
+            $servicesToDecrement = [];
+
+            if (is_array($paketDetails['services'])) {
+                foreach ($paketDetails['services'] as $srv) {
+                    if (isset($srv['id']) && isset($srv['nama']) && isset($srv['jumlah']) && isset($srv['subtotal'])) {
+                        $serviceDetailPaket[] = [
+                            'id' => (int)$srv['id'],
+                            'nama' => $srv['nama'],
+                            'jumlah' => (int)$srv['jumlah'],
+                            'subtotal' => (float)$srv['subtotal'],
+                        ];
+                        $totalServicePaket += (float)$srv['subtotal'];
+                        $servicesToDecrement[] = ['id' => (int)$srv['id'], 'jumlah' => (int)$srv['jumlah'], 'nama' => $srv['nama']];
+                    }
+                }
+            }
+
+            $diskonMember = 0;
+            $memberId = null;
+
+            if ($request->filled('kode_member')) {
+                $member = Member::where('kode_member', $request->kode_member)
+                                ->where('status_keanggotaan', 'Aktif')
+                                ->where('tanggal_kadaluarsa', '>=', now())
+                                ->first();
+                if ($member) {
+                    $diskonMember = $member->diskon_persen;
+                    $memberId = $member->id;
+                } else {
+                    return response()->json(['message' => 'Kode Member tidak valid atau sudah kadaluarsa.', 'success' => false], 400);
+                }
+            }
+
+            DB::beginTransaction();
+            try {
+                foreach ($servicesToDecrement as $srvItem) {
+                    $service = Service::lockForUpdate()->find($srvItem['id']);
+                    if (!$service) {
+                        DB::rollBack();
+                        throw ValidationException::withMessages([
+                            'paket_id' => "Service '{$srvItem['nama']}' dalam paket tidak ditemukan."
+                        ]);
+                    }
+                    if ($service->stok < $srvItem['jumlah']) {
+                        DB::rollBack();
+                        throw ValidationException::withMessages([
+                            'paket_id' => "Stok {$service->nama} kurang untuk paket. Tersedia: {$service->stok}"
+                        ]);
+                    }
+                    $service->decrement('stok', $srvItem['jumlah']);
+                }
+
+                Penyewaan::create([
+                    'meja_id'         => $request->meja_id,
+                    'nama_penyewa'    => $request->nama_penyewa,
+                    'durasi_jam'      => $durasiJam,
+                    'harga_per_jam'   => $hargaPokokSewa,
+                    'kode_kupon'      => null,
+                    'diskon_persen'   => 0,
+                    'total_service'   => $totalServicePaket,
+                    'service_detail'  => json_encode($serviceDetailPaket),
+                    'total_bayar'     => null,
+                    'waktu_mulai'     => now(),
+                    'waktu_selesai'   => $waktuSelesai,
+                    'status'          => 'berlangsung',
+                    'kasir_id'        => Auth::id(),
+                    'paket_id'        => $request->paket_id,
+                    'is_sepuasnya'    => ($durasiJam === 0.0),
+                    'member_id'       => $memberId,
+                    'diskon_member_persen' => $diskonMember,
+                ]);
+
+                Meja::where('id', $request->meja_id)->update(['status' => 'dipakai']);
+
+                DB::commit();
+
+                return response()->json(['message' => "Penyewaan dengan paket '{$paket->nama_paket}' dimulai.", 'success' => true], 200);
+
+            } catch (ValidationException $e) {
+                DB::rollBack();
+                // Menangkap validasi dari dalam try/catch
+                return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Error booking package: ' . $e->getMessage());
+                return response()->json(['message' => 'Gagal memulai penyewaan paket. Silakan coba lagi.', 'success' => false], 500);
+            }
+        } catch (ValidationException $e) {
+             // Menangkap validasi dari request->validate awal
+            return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
+        } catch (\Exception $e) {
+            Log::error('Error pesan paket by Kasir (outer catch): ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal memulai penyewaan paket. Silakan coba lagi.', 'success' => false], 500);
         }
     }
 
 
     public function getPenyewaanAktifJson()
     {
-        $penyewaan = Penyewaan::with('meja', 'member') // Tambah with('member')
+        $penyewaan = Penyewaan::with('meja', 'member')
         ->where('status', 'berlangsung')
         ->get()
         ->map(function ($item) {
-            // Pengecekan waktu habis saat data diambil dari DB
+                // Perbarui status meja menjadi 'waktu_habis' jika sudah melewati waktu selesai
                 if (!is_null($item->waktu_selesai) && $item->waktu_selesai->isPast() && $item->meja->status === 'dipakai') {
                     $item->meja->update(['status' => 'waktu_habis']);
                     Log::info("Meja {$item->meja->nama_meja} (ID: {$item->meja->id}) otomatis diubah menjadi 'waktu_habis'.");
@@ -274,16 +300,18 @@ class KasirController extends Controller
                     'waktu_selesai' => $item->waktu_selesai ? $item->waktu_selesai->toIso8601String() : null,
                     'durasi_jam' => (float)$item->durasi_jam,
                     'meja_nama' => $item->meja->nama_meja,
-                    'status' => $item->status,
+                    // Pastikan status meja terbaru (setelah update di atas) yang dikirim
+                    'status_meja_saat_ini' => $item->meja->status, // Tambah ini
+                    'status' => $item->status, // Status penyewaan
                     'harga_per_jam' => (float)$item->harga_per_jam,
                     'total_service' => (float)$item->total_service,
                     'service_detail' => json_decode($item->service_detail, true),
                     'is_sepuasnya' => is_null($item->waktu_selesai),
                     'paket_id' => $item->paket_id,
-                    'member_id' => $item->member_id, // Tambah member_id
-                    'diskon_member_persen' => (float)$item->diskon_member_persen, // Tambah diskon member
-                    'member_nama' => $item->member ? $item->member->nama_member : null, // Tambah nama member
-                    'member_kode' => $item->member ? $item->member->kode_member : null, // Tambah kode member
+                    'member_id' => $item->member_id,
+                    'diskon_member_persen' => (float)$item->diskon_member_persen,
+                    'member_nama' => $item->member ? $item->member->nama_member : null,
+                    'member_kode' => $item->member ? $item->member->kode_member : null,
                 ];
             });
 
@@ -292,247 +320,292 @@ class KasirController extends Controller
 
     public function addDuration(Request $request, Penyewaan $penyewaan)
     {
-        $request->validate(['additional_durasi_jam' => 'required|numeric|min:0.01']);
+        try {
+            $request->validate(['additional_durasi_jam' => 'required|numeric|min:0.01']);
 
-        if ($penyewaan->status !== 'berlangsung' || is_null($penyewaan->waktu_selesai)) {
-            return response()->json(['message' => 'Tidak bisa menambah durasi untuk penyewaan ini.'], 400);
+            if ($penyewaan->status !== 'berlangsung' || is_null($penyewaan->waktu_selesai)) {
+                return response()->json(['message' => 'Tidak bisa menambah durasi untuk penyewaan ini.', 'success' => false], 400);
+            }
+
+            $penyewaan->durasi_jam += (float)$request->additional_durasi_jam;
+            $penyewaan->waktu_selesai = $penyewaan->waktu_selesai->addMinutes((float)$request->additional_durasi_jam * 60);
+            $penyewaan->save();
+
+            return response()->json(['message' => 'Durasi berhasil ditambahkan!', 'new_durasi_jam' => $penyewaan->durasi_jam, 'new_waktu_selesai' => $penyewaan->waktu_selesai->toIso8601String(), 'success' => true]);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
+        } catch (\Exception $e) {
+            Log::error('Error adding duration: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal menambahkan durasi. Silakan coba lagi.', 'success' => false], 500);
         }
-
-        $penyewaan->durasi_jam += (float)$request->additional_durasi_jam;
-        $penyewaan->waktu_selesai = $penyewaan->waktu_selesai->addMinutes((float)$request->additional_durasi_jam * 60);
-        $penyewaan->save();
-
-        return response()->json(['message' => 'Durasi berhasil ditambahkan!', 'new_durasi_jam' => $penyewaan->durasi_jam, 'new_waktu_selesai' => $penyewaan->waktu_selesai->toIso8601String()]);
     }
 
     public function addService(Request $request, Penyewaan $penyewaan)
     {
-        $request->validate([
-            'services' => 'required|array',
-            'services.*.service_id' => 'required|exists:services,id',
-            'services.*.jumlah' => 'required|integer|min:1',
-        ]);
-
-        if ($penyewaan->status !== 'berlangsung') {
-            return response()->json(['message' => 'Penyewaan tidak aktif.'], 400);
-        }
-
-        DB::beginTransaction();
         try {
-            $existingServiceDetail = json_decode($penyewaan->service_detail, true) ?: [];
-            $totalServiceTambahan = 0;
+            $request->validate([
+                'services' => 'required|array',
+                'services.*.service_id' => 'required|exists:services,id',
+                'services.*.jumlah' => 'required|integer|min:1',
+            ]);
 
-            foreach ($request->services as $serviceItem) {
-                $service = Service::lockForUpdate()->find($serviceItem['service_id']);
-                if (!$service) {
-                    DB::rollBack();
-                    return response()->json(['message' => 'Service tidak ditemukan.'], 404);
-                }
-
-                if ($service->stok < $serviceItem['jumlah']) {
-                    DB::rollBack();
-                    return response()->json(['message' => "Stok {$service->nama} tidak cukup. Tersedia: {$service->stok}"], 400);
-                }
-
-                $subtotal = $service->harga * $serviceItem['jumlah'];
-                $totalServiceTambahan += $subtotal;
-
-                $found = false;
-                foreach ($existingServiceDetail as &$detail) {
-                    if (isset($detail['id']) && $detail['id'] == $service->id) {
-                        $detail['jumlah'] += $serviceItem['jumlah'];
-                        $detail['subtotal'] += $subtotal;
-                        $found = true;
-                        break;
-                    }
-                }
-                if (!$found) {
-                    $existingServiceDetail[] = [
-                        'id' => $service->id,
-                        'nama' => $service->nama,
-                        'jumlah' => $serviceItem['jumlah'],
-                        'subtotal' => $subtotal,
-                    ];
-                }
-
-                $service->decrement('stok', $serviceItem['jumlah']);
+            if ($penyewaan->status !== 'berlangsung') {
+                return response()->json(['message' => 'Penyewaan tidak aktif.', 'success' => false], 400);
             }
 
-            $penyewaan->service_detail = json_encode($existingServiceDetail);
-            $penyewaan->total_service += $totalServiceTambahan;
-            $penyewaan->save();
+            DB::beginTransaction();
+            try {
+                $existingServiceDetail = json_decode($penyewaan->service_detail, true) ?: [];
+                $totalServiceTambahan = 0;
 
-            DB::commit();
-            return response()->json(['message' => 'Service berhasil ditambahkan!', 'new_total_service' => $penyewaan->total_service, 'new_service_detail' => $existingServiceDetail]);
+                foreach ($request->services as $serviceItem) {
+                    $service = Service::lockForUpdate()->find($serviceItem['service_id']);
+                    if (!$service) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Service tidak ditemukan.', 'success' => false], 404);
+                    }
 
+                    if ($service->stok < $serviceItem['jumlah']) {
+                        DB::rollBack();
+                        return response()->json(['message' => "Stok {$service->nama} tidak cukup. Tersedia: {$service->stok}", 'success' => false], 400);
+                    }
+
+                    $subtotal = $service->harga * $serviceItem['jumlah'];
+                    $totalServiceTambahan += $subtotal;
+
+                    $found = false;
+                    foreach ($existingServiceDetail as &$detail) {
+                        if (isset($detail['id']) && $detail['id'] == $service->id) {
+                            $detail['jumlah'] += $serviceItem['jumlah'];
+                            $detail['subtotal'] += $subtotal;
+                            $found = true;
+                            break;
+                        }
+                    }
+                    if (!$found) {
+                        $existingServiceDetail[] = [
+                            'id' => $service->id,
+                            'nama' => $service->nama,
+                            'jumlah' => $serviceItem['jumlah'],
+                            'subtotal' => $subtotal,
+                        ];
+                    }
+
+                    $service->decrement('stok', $serviceItem['jumlah']);
+                }
+
+                $penyewaan->service_detail = json_encode($existingServiceDetail);
+                $penyewaan->total_service += $totalServiceTambahan;
+                $penyewaan->save();
+
+                DB::commit();
+                return response()->json(['message' => 'Service berhasil ditambahkan!', 'new_total_service' => $penyewaan->total_service, 'new_service_detail' => $existingServiceDetail, 'success' => true]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Error adding service (inner catch): ' . $e->getMessage());
+                return response()->json(['message' => 'Gagal menambahkan service. Silakan coba lagi.', 'success' => false], 500);
+            }
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Error adding service: ' . $e->getMessage());
-            return response()->json(['message' => 'Gagal menambahkan service. Silakan coba lagi.'], 500);
+            Log::error('Error adding service (outer catch): ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal menambahkan service. Silakan coba lagi.', 'success' => false], 500);
         }
     }
 
     public function removeService(Request $request, Penyewaan $penyewaan)
     {
-        $request->validate([
-            'service_id' => 'required|integer|exists:services,id',
-        ]);
-
-        if ($penyewaan->status !== 'berlangsung') {
-            return response()->json(['message' => 'Penyewaan tidak aktif.'], 400);
-        }
-
-        DB::beginTransaction();
         try {
-            $existingServiceDetail = json_decode($penyewaan->service_detail, true) ?: [];
-            $serviceToRemoveId = $request->service_id;
-            $removedSubtotal = 0;
-            $removedJumlah = 0;
-            $updatedServiceDetail = [];
-            $serviceName = '';
+            $request->validate([
+                'service_id' => 'required|integer|exists:services,id',
+            ]);
 
-            foreach ($existingServiceDetail as $detail) {
-                if (isset($detail['id']) && $detail['id'] == $serviceToRemoveId) {
-                    $removedSubtotal += $detail['subtotal'];
-                    $removedJumlah += $detail['jumlah'];
-                    $serviceName = $detail['nama'];
-                } else {
-                    $updatedServiceDetail[] = $detail;
+            if ($penyewaan->status !== 'berlangsung') {
+                return response()->json(['message' => 'Penyewaan tidak aktif.', 'success' => false], 400);
+            }
+
+            DB::beginTransaction();
+            try {
+                $existingServiceDetail = json_decode($penyewaan->service_detail, true) ?: [];
+                $serviceToRemoveId = $request->service_id;
+                $removedSubtotal = 0;
+                $removedJumlah = 0;
+                $updatedServiceDetail = [];
+                $serviceName = '';
+
+                foreach ($existingServiceDetail as $detail) {
+                    if (isset($detail['id']) && $detail['id'] == $serviceToRemoveId) {
+                        $removedSubtotal += $detail['subtotal'];
+                        $removedJumlah += $detail['jumlah'];
+                        $serviceName = $detail['nama'];
+                    } else {
+                        $updatedServiceDetail[] = $detail;
+                    }
                 }
-            }
 
-            if ($removedSubtotal === 0) {
+                if ($removedSubtotal === 0) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Service tidak ditemukan dalam daftar penyewaan.', 'success' => false], 404);
+                }
+
+                $service = Service::lockForUpdate()->find($serviceToRemoveId);
+                if ($service) {
+                    $service->increment('stok', $removedJumlah);
+                }
+
+                $penyewaan->service_detail = json_encode($updatedServiceDetail);
+                $penyewaan->total_service -= $removedSubtotal;
+                $penyewaan->save();
+
+                DB::commit();
+                return response()->json(['message' => "Service '{$serviceName}' berhasil dihapus!", 'new_total_service' => $penyewaan->total_service, 'new_service_detail' => $updatedServiceDetail, 'success' => true]);
+
+            } catch (\Exception $e) {
                 DB::rollBack();
-                return response()->json(['message' => 'Service tidak ditemukan dalam daftar penyewaan.'], 404);
+                Log::error('Error removing service (inner catch): ' . $e->getMessage());
+                return response()->json(['message' => 'Gagal menghapus service. Silakan coba lagi.', 'success' => false], 500);
             }
-
-            $service = Service::lockForUpdate()->find($serviceToRemoveId);
-            if ($service) {
-                $service->increment('stok', $removedJumlah);
-            }
-
-            $penyewaan->service_detail = json_encode($updatedServiceDetail);
-            $penyewaan->total_service -= $removedSubtotal;
-            $penyewaan->save();
-
-            DB::commit();
-            return response()->json(['message' => "Service '{$serviceName}' berhasil dihapus!", 'new_total_service' => $penyewaan->total_service, 'new_service_detail' => $updatedServiceDetail]);
-
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Error removing service: ' . $e->getMessage());
-            return response()->json(['message' => 'Gagal menghapus service. Silakan coba lagi.'], 500);
+            Log::error('Error removing service (outer catch): ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal menghapus service. Silakan coba lagi.', 'success' => false], 500);
         }
     }
 
     public function processPayment(Request $request, Penyewaan $penyewaan)
     {
-        $request->validate([
-            'kode_kupon' => 'nullable|string|max:255',
-             'is_qris' => 'boolean',
-        ]);
+        try {
+            $request->validate([
+                'kode_kupon' => 'nullable|string|max:255',
+                'is_qris' => 'boolean',
+            ]);
 
-        if ($penyewaan->status !== 'berlangsung') {
-            return response()->json(['message' => 'Penyewaan tidak dalam status siap dibayar.'], 400);
-        }
-
-        $actualDurationMinutes = $penyewaan->waktu_mulai->diffInMinutes(now());
-        $actualDurationHours = $actualDurationMinutes / 60;
-
-        if (is_null($penyewaan->waktu_selesai)) {
-            $penyewaan->durasi_jam = $actualDurationHours;
-            $penyewaan->waktu_selesai = now();
-            $penyewaan->save();
-        } elseif ($penyewaan->waktu_selesai > now()) {
-            $penyewaan->waktu_selesai = now();
-            $penyewaan->save();
-        }
-
-        $subtotalMain = $penyewaan->durasi_jam * $penyewaan->harga_per_jam;
-
-        $totalBeforeMemberDiscount = $subtotalMain + $penyewaan->total_service;
-
-        // Terapkan diskon member terlebih dahulu
-        $diskonDariMember = ($totalBeforeMemberDiscount * $penyewaan->diskon_member_persen) / 100;
-        $totalAfterMemberDiscount = $totalBeforeMemberDiscount - $diskonDariMember;
-
-        $diskonPersenKupon = 0;
-        $kodeKuponDigunakan = null;
-
-        if ($request->filled('kode_kupon')) {
-            $kupon = Kupon::where('kode', $request->kode_kupon)
-                          ->where('aktif', true)
-                          ->where(function($query) {
-                              $query->whereNull('kadaluarsa')
-                                    ->orWhere('kadaluarsa', '>=', now());
-                          })
-                          ->first();
-
-            if ($kupon) {
-                $diskonPersenKupon = $kupon->diskon_persen;
-                $kodeKuponDigunakan = $kupon->kode;
+            if ($penyewaan->status !== 'berlangsung' && $penyewaan->status !== 'waktu_habis') {
+                 return response()->json(['message' => 'Penyewaan tidak dalam status siap dibayar.', 'success' => false], 400);
             }
+             // Pastikan meja tidak sedang dalam status "kosong" saat proses pembayaran dimulai.
+            if ($penyewaan->meja->status === 'kosong') {
+                return response()->json(['message' => 'Meja sudah kosong dan tidak dapat diproses pembayarannya.', 'success' => false], 400);
+            }
+
+            $actualDurationMinutes = $penyewaan->waktu_mulai->diffInMinutes(now());
+            $actualDurationHours = $actualDurationMinutes / 60;
+
+            if (is_null($penyewaan->waktu_selesai)) {
+                $penyewaan->durasi_jam = $actualDurationHours;
+                $penyewaan->waktu_selesai = now();
+            } elseif ($penyewaan->waktu_selesai > now()) {
+                // Jika masih ada sisa waktu, selesaikan sekarang
+                $penyewaan->waktu_selesai = now();
+            }
+            // Simpan perubahan durasi/waktu selesai aktual ke penyewaan
+            $penyewaan->save();
+
+            $subtotalMain = $penyewaan->durasi_jam * $penyewaan->harga_per_jam;
+
+            $totalBeforeAllDiscounts = $subtotalMain + $penyewaan->total_service;
+
+            $diskonMemberPersen = (float)$penyewaan->diskon_member_persen;
+            $diskonPersenKupon = 0;
+            $kodeKuponDigunakan = null;
+
+            if ($request->filled('kode_kupon')) {
+                $kupon = Kupon::where('kode', $request->kode_kupon)
+                              ->where('aktif', true)
+                              ->where(function($query) {
+                                  $query->whereNull('kadaluarsa')
+                                        ->orWhere('kadaluarsa', '>=', now());
+                              })
+                              ->first();
+
+                if ($kupon) {
+                    $diskonPersenKupon = $kupon->diskon_persen;
+                    $kodeKuponDigunakan = $kupon->kode;
+                }
+            }
+
+            $totalDiskonGabunganPersen = $diskonMemberPersen + $diskonPersenKupon;
+            $finalDiskonPersen = min($totalDiskonGabunganPersen, 100);
+
+            $totalDiskonAmount = ($totalBeforeAllDiscounts * $finalDiskonPersen) / 100;
+            $finalTotalBayar = $totalBeforeAllDiscounts - $totalDiskonAmount;
+            // Pastikan total bayar tidak negatif
+            if ($finalTotalBayar < 0) $finalTotalBayar = 0;
+
+
+            $isQrisPayment = $request->boolean('is_qris', false);
+            $penyewaan->update([
+                'kasir_id'      => Auth::id(), // Pastikan kasir_id terisi saat pembayaran
+                'kode_kupon'    => $kodeKuponDigunakan,
+                'diskon_persen' => $diskonPersenKupon,
+                'total_bayar'   => $finalTotalBayar,
+                'status'        => 'dibayar',
+                'is_qris'       => $isQrisPayment,
+            ]);
+
+            // Meja diupdate menjadi kosong hanya jika status penyewaan sudah 'dibayar'
+            $penyewaan->meja->update(['status' => 'kosong']);
+
+
+            return response()->json(['message' => 'Pembayaran sukses!', 'total_bayar' => $finalTotalBayar, 'success' => true]);
+
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
+        } catch (\Exception $e) {
+            Log::error('Error processing payment: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal memproses pembayaran. Silakan coba lagi.', 'success' => false], 500);
         }
-
-        // Gabungan diskon member dan kupon tidak boleh melebihi 100%
-        $totalDiskonPersen = $penyewaan->diskon_member_persen + $diskonPersenKupon;
-        if ($totalDiskonPersen > 100) {
-            $totalDiskonPersen = 100; // Batasi maksimal diskon 100%
-        }
-
-        // Hitung ulang diskon total berdasarkan persentase gabungan dari subtotal awal
-        $totalDiskonAmount = ($totalBeforeMemberDiscount * $totalDiskonPersen) / 100;
-        $finalTotalBayar = $totalBeforeMemberDiscount - $totalDiskonAmount;
-
-        $isQrisPayment = $request->boolean('is_qris', false);
-        $penyewaan->update([
-            'kasir_id'      => Auth::id(),
-            'kode_kupon'    => $kodeKuponDigunakan,
-            'diskon_persen' => $diskonPersenKupon, // Ini adalah diskon dari kupon saja
-            'total_bayar'   => $finalTotalBayar,
-            'status'        => 'dibayar',
-            'is_qris' => $isQrisPayment,
-        ]);
-
-        Meja::where('id', $penyewaan->meja_id)->update(['status' => 'kosong']);
-
-        return response()->json(['message' => 'Pembayaran sukses!', 'total_bayar' => $finalTotalBayar]);
     }
 
     public function deletePenyewaan(Request $request, Penyewaan $penyewaan)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'supervisor'])) {
-            return response()->json([
-                'message' => 'Akses ditolak. Penghapusan meja hanya bisa dilakukan oleh Admin atau Supervisor.'
-            ], 403);
-        }        
-
-        if ($penyewaan->status !== 'berlangsung') {
-            return response()->json(['message' => 'Penyewaan tidak dalam status aktif sehingga tidak dapat dihapus.'], 400);
-        }
-
-        DB::beginTransaction();
         try {
-            $serviceDetails = json_decode($penyewaan->service_detail, true) ?: [];
-            foreach ($serviceDetails as $srv) {
-                if (isset($srv['id']) && isset($srv['jumlah'])) {
-                    $service = Service::lockForUpdate()->find($srv['id']);
-                    if ($service) {
-                        $service->increment('stok', $srv['jumlah']);
-                    }
-                }
+            if (!in_array(Auth::user()->role, ['admin', 'supervisor'])) {
+                return response()->json([
+                    'message' => 'Akses ditolak. Penghapusan meja hanya bisa dilakukan oleh Admin atau Supervisor.',
+                    'success' => false
+                ], 403);
+            }        
+
+            if ($penyewaan->status !== 'berlangsung' && $penyewaan->status !== 'waktu_habis') {
+                return response()->json(['message' => 'Penyewaan tidak dalam status aktif atau waktu habis sehingga tidak dapat dihapus.', 'success' => false], 400);
+            }
+             // Pastikan meja tidak dalam status kosong.
+            if ($penyewaan->meja->status === 'kosong') {
+                return response()->json(['message' => 'Meja sudah kosong dan tidak perlu dihapus penyewaannya.', 'success' => false], 400);
             }
 
-            $penyewaan->delete();
-            Meja::where('id', $penyewaan->meja_id)->update(['status' => 'kosong']);
 
-            DB::commit();
-            return response()->json(['message' => 'Penyewaan berhasil dihapus.']);
+            DB::beginTransaction();
+            try {
+                // Mengembalikan stok service jika ada service yang terkait dengan penyewaan ini
+                $serviceDetails = json_decode($penyewaan->service_detail, true) ?: [];
+                foreach ($serviceDetails as $srv) {
+                    if (isset($srv['id']) && isset($srv['jumlah'])) {
+                        $service = Service::lockForUpdate()->find($srv['id']);
+                        if ($service) {
+                            $service->increment('stok', $srv['jumlah']);
+                        }
+                    }
+                }
 
+                $penyewaan->delete();
+                // Hanya update status meja menjadi kosong jika belum kosong
+                $penyewaan->meja->update(['status' => 'kosong']);
+
+                DB::commit();
+                return response()->json(['message' => 'Penyewaan berhasil dihapus.', 'success' => true]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Error deleting penyewaan ' . $penyewaan->id . ': ' . $e->getMessage());
+                return response()->json(['message' => 'Gagal menghapus penyewaan. Silakan coba lagi.', 'success' => false], 500);
+            }
         } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Error deleting penyewaan ' . $penyewaan->id . ': ' . $e->getMessage());
-            return response()->json(['message' => 'Gagal menghapus penyewaan. Silakan coba lagi.'], 500);
+            Log::error('Error deletePenyewaan (outer catch): ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal menghapus penyewaan. Silakan coba lagi.', 'success' => false], 500);
         }
     }
 

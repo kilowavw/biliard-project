@@ -70,7 +70,7 @@
                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2">
                     <option value="">-- Pilih Paket --</option>
                 </select>
-                <p id="paket_deskripsi_preview" class="text-sm text-gray-500 mt-1 italic" style="display:none;"></p>
+                <div id="paket_deskripsi_preview" class="text-sm text-gray-500 mt-1 italic" style="display:none;"></div>
             </div>
 
             <div id="non_paket_options" class="space-y-3">
@@ -210,6 +210,7 @@
     });
 </script>
 @endif
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     const serverTime = new Date("{{ $serverTime }}");
     const clientTimeAtLoad = new Date();
@@ -247,10 +248,13 @@
         getEl('kode_member').value = '';
         getEl('nama_penyewa').value = '';
         getEl('member_info_preview').style.display = 'none';
+        getEl('member_info_preview').classList.remove('text-red-600'); // reset warna
+        getEl('member_info_preview').classList.add('text-green-600');   // reset warna default
         memberData = { valid: false, nama_member: '', diskon_persen: 0 }; // Reset member data
         
         getEl('paket_id_select').value = '';
         getEl('paket_deskripsi_preview').style.display = 'none';
+        getEl('paket_deskripsi_preview').innerHTML = ''; // Pastikan konten dibersihkan
         getEl('paket_id_select').style.display = 'block'; // Show package field by default
 
         getEl('non_paket_options').style.display = 'block';
@@ -260,7 +264,7 @@
         
         getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}';
 
-        populatePaketsDropdown(); // Populate all packages initially
+        populatePaketsDropdown(false); // Populate based on member status (false by default)
         toggleModal('pesanModal', true);
     };
     const closeModal = () => toggleModal('pesanModal', false);
@@ -303,15 +307,22 @@
     };
 
     const handleTimeUpUI = (penyewaanData) => {
-        const mejaId = penyewaanData.meja_id; const actionsCont = document.querySelector(`#penyewaan-${mejaId} .flex-wrap`);
+        const mejaId = penyewaanData.meja_id;
+        const mejaCardEl = getEl(`meja-card-${mejaId}`);
+        const statusMejaEl = mejaCardEl.querySelector(`#status-meja-${mejaId}`);
+        const actionsCont = document.querySelector(`#penyewaan-${mejaId} .flex-wrap`);
+
+        if (statusMejaEl) {
+            statusMejaEl.innerText = 'Status: waktu_habis';
+        }
+        if (mejaCardEl) {
+            mejaCardEl.classList.remove('bg-green-100', 'bg-neutral-600');
+            mejaCardEl.classList.add('bg-red-200'); // Ganti dengan warna untuk 'waktu_habis'
+        }
+
         if (actionsCont) {
             actionsCont.innerHTML = `
-                @if(Auth::check() && Auth::user()->role == 'admin')
-                <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanData.id}, '${penyewaanData.meja_nama}');">
-                    <i class="fa-solid fa-trash"></i> Hapus
-                </button>
-                @endif
-                @if(Auth::check() && Auth::user()->role == 'supervisor')
+                @if(Auth::check() && (Auth::user()->role == 'admin' || Auth::user()->role == 'supervisor'))
                 <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanData.id}, '${penyewaanData.meja_nama}');">
                     <i class="fa-solid fa-trash"></i> Hapus
                 </button>
@@ -319,12 +330,20 @@
                 <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanData.id});">
                     <i class="fa-solid fa-wine-bottle"></i> Tambah Service
                 </button>
+                <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran.</span>
+                @if(Request::is('kasir*'))
                 <button type="button" class="px-3 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600" onclick="event.preventDefault(); openPaymentModal(${penyewaanData.id});">
                     <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
                 </button>
+                @endif
             `;
         }
-        openPaymentModal(penyewaanData.id);
+
+        updateMejaStatusOnServer(mejaId, 'waktu_habis');
+
+        @if(Request::is('kasir*'))
+            openPaymentModal(penyewaanData.id);
+        @endif
     };
 
     const toggleServiceDropdown = (penyewaanId) => {
@@ -371,39 +390,56 @@
                 const statusMejaEl = card.querySelector(`#status-meja-${mejaId}`);
                 let pesanBtnEl = card.querySelector(`#btn-pesan-${mejaId}`);
                 const penyewaanDivEl = card.querySelector(`#penyewaan-${mejaId}`);
+                const detailEl = getEl(`detail-${mejaId}`); // Ambil elemen detail
 
+                // Jika ada penyewaan aktif untuk meja ini
                 if (penyewaanForThisMeja) {
-                    card.classList.remove('bg-neutral-600'); card.classList.add('bg-green-100');
-                    if (statusMejaEl) statusMejaEl.innerText = 'Status: dipakai';
+                    // Update status meja secara otomatis jika waktu_selesai sudah lewat dan status masih dipakai
+                    // Ini sebenarnya sudah dilakukan di backend, tapi juga perlu disinkronkan di frontend untuk real-time UI
+                    const waktuSelesaiObj = penyewaanForThisMeja.waktu_selesai ? new Date(penyewaanForThisMeja.waktu_selesai) : null;
+                    const now = getCalibratedNow();
+                    const isTimeUpBackend = waktuSelesaiObj && (waktuSelesaiObj.getTime() - now.getTime() <= 0);
+
+                    // Sinkronkan status UI dengan status_meja_saat_ini dari backend
+                    const currentMejaStatus = penyewaanForThisMeja.status_meja_saat_ini;
+
+                    card.classList.remove('bg-neutral-600', 'bg-green-100', 'bg-red-200'); // Hapus semua background
+                    if (currentMejaStatus === 'dipakai') {
+                        card.classList.add('bg-green-100');
+                    } else if (currentMejaStatus === 'waktu_habis') {
+                        card.classList.add('bg-red-200');
+                    }
+                    if (statusMejaEl) statusMejaEl.innerText = `Status: ${currentMejaStatus}`;
                     if (pesanBtnEl) pesanBtnEl.style.display = 'none';
 
-                    const isTimeUp = penyewaanForThisMeja.waktu_selesai && (new Date(penyewaanForThisMeja.waktu_selesai)).getTime() - getCalibratedNow().getTime() <= 0;
                     const isSepuasnya = penyewaanForThisMeja.is_sepuasnya;
-
                     let timerDisplay = `⏳ <span id="countdown-${penyewaanForThisMeja.id}">--:--:--</span>`;
                     if (isSepuasnya) timerDisplay = `⏳ <span id="running-timer-${penyewaanForThisMeja.id}">00:00:00</span> (Main Sepuasnya)`;
-                    else if (isTimeUp) timerDisplay = `⏳ Waktu habis!`;
+                    else if (isTimeUpBackend) timerDisplay = `⏳ Waktu habis!`;
 
                     let actionButtonsHtml = '';
                     let deleteButtonHtml = '';
 
-                    @if(Auth::check() && Auth::user()->role == 'admin')
-                    deleteButtonHtml = `
-                        <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanForThisMeja.id}, '${penyewaanForThisMeja.meja_nama}');">
-                            <i class="fa-solid fa-trash"></i> Hapus
-                        </button>
-                    `;
+                    @if(Auth::check() && (Auth::user()->role == 'admin' || Auth::user()->role == 'supervisor'))
+                        deleteButtonHtml = `
+                            <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanForThisMeja.id}, '${penyewaanForThisMeja.meja_nama}');">
+                                <i class="fa-solid fa-trash"></i> Hapus
+                            </button>
+                        `;
                     @endif
 
-                    @if(Auth::check() && Auth::user()->role == 'supervisor')
-                    deleteButtonHtml = `
-                        <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanForThisMeja.id}, '${penyewaanForThisMeja.meja_nama}');">
-                            <i class="fa-solid fa-trash"></i> Hapus
-                        </button>
-                    `;
-                    @endif
-
-                    if (isSepuasnya || isTimeUp) {
+                    if (currentMejaStatus === 'waktu_habis') { // Kondisi untuk status 'waktu_habis'
+                        actionButtonsHtml = `
+                            ${deleteButtonHtml}
+                            <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
+                                <i class="fa-solid fa-wine-bottle"></i> Tambah Service
+                            </button>
+                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran.</span>
+                            <button type="button" class="px-3 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600" onclick="event.preventDefault(); openPaymentModal(${penyewaanForThisMeja.id});">
+                                <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
+                            </button>
+                        `;
+                    } else if (isSepuasnya || isTimeUpBackend) { // Logika sebelumnya untuk isSepuasnya / waktu habis di UI
                         actionButtonsHtml = `
                             ${deleteButtonHtml}
                             <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
@@ -413,7 +449,7 @@
                                 <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
                             </button>
                         `;
-                    } else {
+                    } else { // Status 'dipakai' normal
                         actionButtonsHtml = `
                             ${deleteButtonHtml}
                             <button type="button" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md text-xs" onclick="event.preventDefault(); openAddDurationModal(${penyewaanForThisMeja.id});">
@@ -475,8 +511,8 @@
                                         <p class="text-xs text-gray-500"><i class="fa-solid fa-hourglass-half"></i> Durasi: ${isSepuasnya ? 'Main Sepuasnya' : fmtDur(penyewaanForThisMeja.durasi_jam)}</p>
                                     </div>
                                     <div class="text-right">
-                                        <span class="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">DIPAKAI</span>
-                                        <p class="text-sm font-bold text-blue-700 mt-1">${timerDisplay}</p>
+                                        <span class="inline-block ${currentMejaStatus === 'waktu_habis' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'} text-xs font-semibold px-2 py-1 rounded-full">${currentMejaStatus.toUpperCase().replace('_', ' ')}</span>
+                                        <p class="text-sm font-bold text-red-700 mt-1">${timerDisplay}</p>
                                     </div>
                                 </div>
                                 ${serviceDetailHtml}
@@ -486,24 +522,40 @@
                         const timerEl = isSepuasnya ? getEl(`running-timer-${penyewaanForThisMeja.id}`) : getEl(`countdown-${penyewaanForThisMeja.id}`);
                         if (timerEl) {
                             if (isSepuasnya) startRunningTimer(timerEl, penyewaanForThisMeja.waktu_mulai, penyewaanForThisMeja);
-                            else if (penyewaanForThisMeja.status === 'berlangsung' && !isTimeUp) startCountdown(timerEl, penyewaanForThisMeja.waktu_selesai, penyewaanForThisMeja);
-                            else if (isTimeUp) { timerEl.innerText = 'Waktu habis!'; timerEl.classList.add('text-blue-700','font-bold'); }
+                            else if (currentMejaStatus === 'dipakai') startCountdown(timerEl, penyewaanForThisMeja.waktu_selesai, penyewaanForThisMeja);
+                            else if (currentMejaStatus === 'waktu_habis') { timerEl.innerText = 'Waktu habis!'; timerEl.classList.add('text-red-700','font-bold'); }
                         }
                     }
-                } else {
-                    card.classList.remove('bg-green-100'); card.classList.add('bg-neutral-600');
+                } else { // Jika meja kosong
+                    card.classList.remove('bg-green-100', 'bg-red-200');
+                    card.classList.add('bg-neutral-600');
                     if (statusMejaEl) statusMejaEl.innerText = 'Status: kosong';
                     if (penyewaanDivEl) penyewaanDivEl.innerHTML = '';
 
-                    if (!pesanBtnEl) {
-                        pesanBtnEl = document.createElement('button'); pesanBtnEl.id = `btn-pesan-${mejaId}`; pesanBtnEl.className = 'mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'; pesanBtnEl.innerText = 'Pesan';
-                        pesanBtnEl.onclick = () => openModal(mejaId); card.appendChild(pesanBtnEl);
+                    // Jika elemen pesanBtnEl berada di dalam detailEl, ia akan disembunyikan/ditampilkan bersama detailEl
+                    // Anda mungkin perlu menyesuaikan bagaimana tombol pesan ini muncul/hilang
+                    let currentPesanBtn = detailEl.querySelector(`#btn-pesan-${mejaId}`);
+                    if (!currentPesanBtn) { // Buat jika belum ada
+                        currentPesanBtn = document.createElement('button');
+                        currentPesanBtn.id = `btn-pesan-${mejaId}`;
+                        currentPesanBtn.className = 'w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none';
+                        currentPesanBtn.innerText = 'Pesan';
+                        currentPesanBtn.onclick = (e) => { e.stopPropagation(); openModal(mejaId); };
+                        detailEl.prepend(currentPesanBtn); // Tambahkan ke bagian atas detail
                     }
-                    pesanBtnEl.style.display = 'block';
+                    // Pastikan tombol pesan selalu terlihat saat status meja kosong (di dalam detailEl)
+                    currentPesanBtn.style.display = 'block';
 
                     for (const id in countdownIntervals) {
                         if (currentActiveRentals[id] && currentActiveRentals[id].meja_id === mejaId) { clearInterval(countdownIntervals[id]); delete countdownIntervals[id]; }
                     }
+                }
+
+                // Sembunyikan semua detail jika bukan activeCardId, kecuali yang aktif
+                if (activeCardId !== mejaId) {
+                    detailEl.classList.add('hidden');
+                } else {
+                    detailEl.classList.remove('hidden');
                 }
             });
         } catch (error) { console.error('Error fetching and rendering mejas:', error); }
@@ -529,7 +581,9 @@
             const finalDiskonPersen = Math.min(totalDiskonGabunganPersen, 100);
 
             const totalDiskonAmount = (totalBeforeAllDiscounts * finalDiskonPersen) / 100;
-            const finalTotal = totalBeforeAllDiscounts - totalDiskonAmount;
+            let finalTotal = totalBeforeAllDiscounts - totalDiskonAmount;
+            if (finalTotal < 0) finalTotal = 0;
+
 
             // Diskon member ditampilkan terpisah
             const diskonMemberAmount = (totalBeforeAllDiscounts * diskonMemberPersen) / 100;
@@ -621,12 +675,10 @@
         allAvailablePakets.forEach(paket => {
             const isMemberPaket = paket.nama_paket.toLowerCase().startsWith('member');
 
-            // Jika bukan member, jangan tampilkan paket member
             if (!isMember && isMemberPaket) {
                 return;
             }
 
-            // Jika member, semua paket tampil
             const option = document.createElement('option');
             option.value = paket.id;
             option.innerText = paket.nama_paket;
@@ -655,7 +707,6 @@
                 }
 
                 if (res.ok && data.valid) {
-                    // Jika member valid
                     memberData = data;
                     memberInfoPreview.innerText = `Member: ${data.nama_member} (Diskon: ${data.diskon_persen}%)`;
                     memberInfoPreview.style.display = 'block';
@@ -667,7 +718,6 @@
 
                     populatePaketsDropdown(true); // tampilkan semua paket
                 } else {
-                    // Jika bukan member
                     memberInfoPreview.innerText = data.message || 'Kode Member tidak valid.';
                     memberInfoPreview.style.display = 'block';
                     memberInfoPreview.classList.remove('text-green-600');
@@ -691,7 +741,6 @@
                 populatePaketsDropdown(false);
             }
         } else {
-            // Input kosong
             memberInfoPreview.style.display = 'none';
             namaPenyewaInput.value = '';
             namaPenyewaInput.readOnly = false;
@@ -739,12 +788,12 @@
                 }
                 
                 // --- BAGIAN BARU: Deskripsi Tambahan DULU, lalu Layanan ---
-                if (isiPaket.deskripsi_tambahan) {
-                    descHtml.push(`<p class="mt-2"><strong>Deskripsi Paket:</strong> ${isiPaket.deskripsi_tambahan}</p>`);
+                if (isiPaket.deskripsi_tambahan) { // ini adalah penambahan yang diminta
+                    descHtml.push(`<p class="mt-2 text-gray-700"><strong>Deskripsi Paket:</strong> ${isiPaket.deskripsi_tambahan}</p>`);
                 }
 
                 if (isiPaket.services && isiPaket.services.length > 0) {
-                    let serviceListHtml = '<p class="mt-2 mb-1"><strong>Termasuk Layanan:</strong></p><ul class="list-disc list-inside ml-4 text-gray-600">';
+                    let serviceListHtml = '<p class="mt-2 mb-1 text-gray-700"><strong>Termasuk Layanan:</strong></p><ul class="list-disc list-inside ml-4 text-gray-600">';
                     isiPaket.services.forEach(s => {
                         const serviceName = s.nama || 'Nama Service Tidak Diketahui';
                         const serviceCount = s.jumlah || 0;
@@ -781,12 +830,76 @@
         }
     });
 
+    getEl('is_sepuasnya').addEventListener('change', function() {
+        if (getEl('paket_id_select').value) return;
+        const durasiWrapper = getEl('durasi_jam_wrapper');
+        const durasiInput = getEl('durasi_jam');
+        const paketSelect = getEl('paket_id_select');
+        const paketDeskripsiPreview = getEl('paket_deskripsi_preview');
+
+        if (this.checked) {
+            durasiWrapper.style.display = 'none';
+            durasiInput.removeAttribute('required');
+            durasiInput.value = '';
+            paketSelect.style.display = 'none'; // Sembunyikan field paket
+            paketDeskripsiPreview.style.display = 'none'; // Sembunyikan juga deskripsi paket
+            paketDeskripsiPreview.innerHTML = ''; // Kosongkan deskripsi paket
+            getEl('formPesan').action = '{{ route('kasir.pesanSepuasnya') }}';
+        } else {
+            durasiWrapper.style.display = 'block';
+            durasiInput.setAttribute('required', 'required');
+            paketSelect.style.display = 'block'; // Tampilkan kembali field paket
+            populatePaketsDropdown(memberData.valid); // Isi ulang dropdown paket sesuai status member
+            // paketDeskripsiPreview.style.display akan dihandle oleh event listener paket_id_select jika ada paket yang terpilih
+            getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}';
+        }
+    });
+
+    getEl('formPesan').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+        try {
+            const formData = new FormData(form);
+            const res = await fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }, // Tambah Accept header
+                body: formData
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                Swal.fire('Berhasil!', data.message, 'success');
+                closeModal();
+                fetchAndRenderMejas();
+            } else {
+                let errorMessage = data.message || 'Terjadi kesalahan.';
+                if (data.errors) {
+                    const errorList = Object.values(data.errors).map(err => `<li>${err.join(', ')}</li>`).join('');
+                    errorMessage += `<ul class="text-left mt-2 list-disc list-inside">${errorList}</ul>`;
+                }
+                Swal.fire('Gagal!', errorMessage, 'error');
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            Swal.fire('Error!', 'Terjadi kesalahan jaringan atau server.', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Mulai';
+        }
+    });
+
+
     getEl('formAddDuration').addEventListener('submit', async (e) => {
         e.preventDefault(); const pId = getEl('add_duration_penyewaan_id').value; const addDur = getEl('additional_durasi_jam').value;
         const submitBtn = e.target.querySelector('button[type="submit"]'); submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menambah...';
         try {
             const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${pId}/add-duration`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ additional_durasi_jam: addDur }) });
-            const data = await res.json(); if (res.ok) { Swal.fire('Berhasil!', data.message, 'success'); closeAddDurationModal(); fetchAndRenderMejas(); }
+            const data = await res.json();
+            if (data.success) { Swal.fire('Berhasil!', data.message, 'success'); closeAddDurationModal(); fetchAndRenderMejas(); }
             else { Swal.fire('Gagal!', data.message || 'Terjadi kesalahan.', 'error'); }
         } catch (error) { Swal.fire('Error!', 'Terjadi kesalahan jaringan atau server saat menambah durasi.', 'error'); console.error('Error adding duration:', error); }
         finally { submitBtn.disabled = false; submitBtn.innerHTML = 'Tambah Durasi'; }
@@ -819,7 +932,7 @@
         try {
             const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${pId}/add-service`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ services: selSrv }) });
             const data = await res.json();
-            if (res.ok) { Swal.fire('Berhasil!', data.message, 'success'); closeAddServiceModal(); fetchAndRenderMejas(); }
+            if (data.success) { Swal.fire('Berhasil!', data.message, 'success'); closeAddServiceModal(); fetchAndRenderMejas(); }
             else { Swal.fire('Gagal!', data.message || 'Terjadi kesalahan.', 'error'); }
         } catch (error) { Swal.fire('Error!', 'Terjadi kesalahan jaringan atau server saat menambah service.', 'error'); console.error('Error adding service:', error); }
         finally { submitBtn.disabled = false; submitBtn.innerHTML = 'Tambah Service'; }
@@ -831,7 +944,7 @@
         try {
             const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${pId}/bayar`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ kode_kupon: kupon }) });
             const data = await res.json();
-            if (res.ok) {
+            if (data.success) {
                 Swal.fire('Berhasil!', data.message + ' Total bayar: ' + fmtRp(data.total_bayar), 'success'); closePaymentModal();
                 if (countdownIntervals[pId]) { clearInterval(countdownIntervals[pId]); delete countdownIntervals[pId]; }
                 fetchAndRenderMejas();
@@ -882,8 +995,8 @@
     };
 
     const confirmDeletePenyewaan = async (penyewaanId, mejaNama) => {
-        if (userRole !== 'admin') {
-            Swal.fire({ icon: 'error', title: 'Akses Ditolak!', text: 'Penghapusan meja hanya bisa dilakukan oleh Supervisor.', confirmButtonText: 'OK' });
+        if (!['admin', 'supervisor'].includes(userRole)) {
+            Swal.fire({ icon: 'error', title: 'Akses Ditolak!', text: 'Penghapusan meja hanya bisa dilakukan oleh Admin atau Supervisor.', confirmButtonText: 'OK' });
             return;
         }
 
@@ -910,7 +1023,7 @@
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
             });
             const data = await res.json();
-            if (res.ok) {
+            if (res.ok && data.success) {
                 Swal.fire('Dihapus!', data.message, 'success');
                 if (countdownIntervals[penyewaanId]) { clearInterval(countdownIntervals[penyewaanId]); delete countdownIntervals[penyewaanId]; }
                 fetchAndRenderMejas();
@@ -920,28 +1033,26 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         getEl('formPesan').action = '{{ route('kasir.pesanDurasi') }}';
-        populatePaketsDropdown(); // Initial populate
+        populatePaketsDropdown(memberData.valid); // Initial populate
         fetchAndRenderMejas();
         setInterval(fetchAndRenderMejas, 5000);
     });
+    
     let activeCardId = null;
 
     function toggleDetail(mejaId) {
-        // Ambil elemen detail
         const detailEl = document.getElementById(`detail-${mejaId}`);
 
         if (activeCardId === mejaId) {
-            // Kalau klik card yg sama → toggle hide
             detailEl.classList.toggle("hidden");
             if (detailEl.classList.contains("hidden")) {
                 activeCardId = null;
             }
         } else {
-            // Tutup detail card lain
             if (activeCardId !== null) {
-                document.getElementById(`detail-${activeCardId}`).classList.add("hidden");
+                const prevDetailEl = document.getElementById(`detail-${activeCardId}`);
+                if (prevDetailEl) prevDetailEl.classList.add("hidden");
             }
-            // Tampilkan detail card yg diklik
             detailEl.classList.remove("hidden");
             activeCardId = mejaId;
         }
