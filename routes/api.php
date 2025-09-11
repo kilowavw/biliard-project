@@ -28,3 +28,9 @@ Route::post('/meja/{meja}/update-status', function (Request $request, App\Models
     $meja->update(['status' => $request->status]);
     return response()->json(['message' => 'Status meja berhasil diperbarui.']);
 });
+
+Route::get('/get-server-time', function () {
+    return response()->json([
+        'serverTime' => now()->toIso8601String()
+    ]);
+});

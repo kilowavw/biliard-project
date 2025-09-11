@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}"> {{-- Ini PENTING untuk AJAX --}}
     <title>@yield('title') - Billiard</title>
 
     <!-- Font Inter -->
@@ -94,7 +94,7 @@
                 $homeRoute = '#';
                 if (Auth::check()) {
                     switch (Auth::user()->role) {
-                        case 'admin': $homeRoute = route('dashboard.kasir'); break;
+                        case 'admin': $homeRoute = route('dashboard.kasir'); break; // Sesuaikan dengan route dashboard admin
                         case 'bos': $homeRoute = route('dashboard.bos'); break;
                         case 'supervisor': $homeRoute = route('dashboard.kasir'); break;
                         case 'kasir': $homeRoute = route('dashboard.kasir'); break;
@@ -105,65 +105,82 @@
                 $currentRouteName = Route::currentRouteName();
             @endphp
 
-            <a href="{{ $homeRoute }}" class="flex items-center px-4 py-2 rounded
-                {{ in_array($currentRouteName, ['dashboard.admin','dashboard.bos','dashboard.supervisor','dashboard.kasir']) ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa fa-home mr-3"></i> Home
-            </a>
+            <nav>
+                <a href="{{ $homeRoute }}" class="flex items-center px-4 py-2 rounded
+                    {{ in_array($currentRouteName, ['dashboard.admin','dashboard.bos','dashboard.supervisor','dashboard.kasir']) ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa fa-home w-5 text-center mr-3"></i> Home
+                </a>
+            
+                @if(auth()->user()->role == 'admin')
+                <a href="{{ route('admin.users') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('admin.users*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-users w-5 text-center mr-3"></i> Users
+                </a>
+            
+                <a href="{{ route('admin.mejas.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('admin.mejas.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-table-tennis-paddle-ball w-5 text-center mr-3"></i> Meja
+                </a>
+            
+                <a href="{{ route('admin.kupons.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('admin.kupons.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-tags w-5 text-center mr-3"></i> Kupon
+                </a>
+            
+                <a href="{{ route('members.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('members.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-user-group-crown w-5 text-center mr-3"></i> Members
+                </a>
+            
+                <a href="{{ route('admin.services.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('admin.services.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-mug-hot w-5 text-center mr-3"></i> Layanan
+                </a>
+            
+                <a href="{{ route('admin.pakets.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('admin.pakets.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-box-open w-5 text-center mr-3"></i> Paket
+                </a>
+            
+                <a href="https://cbcbilliard.com/compro" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-building w-5 text-center mr-3"></i> Edit Compro
+                </a>
+                @endif
+            
+                @if(auth()->user()->role == 'kasir')
+                <a href="{{ route('kasir.serviceOrderIndex') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('kasir.serviceOrderIndex') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-mug-hot w-5 text-center mr-3"></i> Layanan
+                </a>
+                @endif
+            
+                @if(auth()->user()->role == 'admin' || auth()->user()->role == 'bos')
+                <a href="{{ route('admin.harga_settings.index') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('admin.harga_settings.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-money-bill-wave w-5 text-center mr-3"></i> Harga
+                </a>
+                @endif
+            
+                <a href="{{ route('laporan.harian') }}" class="flex items-center px-4 py-2 rounded
+                    {{ request()->routeIs('laporan.harian') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                    <i class="fa-solid fa-receipt w-5 text-center mr-3"></i> Rekap Transaksi
+                </a>
+            </nav>
 
-            @if(auth()->user()->role == 'admin')
-            <a href="{{ route('admin.users') }}" class="flex items-center px-4 py-2 rounded
-                {{ request()->routeIs('admin.users*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa-solid fa-users mr-3"></i> Users
-            </a>
-            <a href="{{ route('admin.mejas.index') }}" class="flex items-center px-4 py-2 rounded
-                {{ request()->routeIs('admin.mejas.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa-solid fa-table-tennis-paddle-ball mr-3"></i> Meja
-            </a>
-            <a href="{{ route('admin.kupons.index') }}" class="flex items-center px-4 py-2 rounded
-                {{ request()->routeIs('admin.kupons.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa-solid fa-tags mr-3"></i> Kupon
-            </a>
-            <a href="{{ route('members.index') }}" class="flex items-center px-4 py-2 rounded
-                {{ request()->routeIs('members.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa-solid fa-user-group-crown mr-3"></i> Members
-            </a>
-            <a href="{{ route('admin.services.index') }}" class="flex items-center px-4 py-2 rounded
-                {{ request()->routeIs('admin.services.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa-solid fa-mug-hot mr-3"></i> Layanan
-            </a>
-            <a href="{{ route('admin.pakets.index') }}" class="flex items-center px-4 py-2 rounded
-                {{ request()->routeIs('admin.pakets.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa-solid fa-box-open mr-3"></i> Paket
-            </a>
-            @endif
-
-            @if(auth()->user()->role == 'kasir')
-            <a href="{{ route('kasir.serviceOrderIndex') }}" class="flex items-center px-4 py-2 rounded
-                {{ request()->routeIs('kasir.serviceOrderIndex') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa-solid fa-mug-hot mr-3"></i> Layanan
-            </a>
-            @endif
-
-            @if(auth()->user()->role == 'admin' || auth()->user()->role == 'bos')
-            <a href="{{ route('admin.harga_settings.index') }}" class="flex items-center px-4 py-2 rounded
-                {{ request()->routeIs('admin.harga_settings.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa-solid fa-money-bill-wave mr-3"></i> Harga
-            </a>
-            @endif
-
-            <a href="{{ route('laporan.harian') }}" class="flex items-center px-4 py-2 rounded
-                {{ request()->routeIs('laporan.harian') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                <i class="fa-solid fa-receipt mr-3"></i> Rekap Transaksi
-            </a>
-        </nav>
         <!-- System Section -->
             <div class="px-2 mt-6 text-sm text-gray-400">
                 System
             </div>
             <nav class="px-2 py-2 space-y-1">
                 {{-- Ini masih dummy, mungkin akan dihapus atau diganti --}}
-                <a href="#" class="flex items-center px-4 py-2 rounded hover:bg-[#282828]">
+                 @if(auth()->user()->role == 'admin' || auth()->user()->role == 'bos')
+                <a href="{{ route('lampu.index') }}" class="flex items-center px-4 py-2 rounded hover:bg-[#282828]">
                     <i class="fa fa-solid fa-lightbulb mr-3"></i> Lamp Control
+                </a>
+                @endif
+                <a href="{{ route('panduan') }}" class="flex items-center px-4 py-2 rounded hover:bg-[#282828]">
+                    <i class="fa fa-solid fa-circle-info mr-3"></i> Panduan
                 </a>
                 <a onclick="event.preventDefault(); document.getElementById('logout-form').submit();" 
                class="flex items-center px-4 py-2 rounded hover:bg-[#282828] cursor-pointer">
@@ -223,6 +240,71 @@
 
     <!-- Flowbite -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
+
+    <script>
+        // Ambil CSRF token dari meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content; // [3], [5], [6]
+
+        let currentPriceType = ''; // Untuk melacak jenis harga yang terakhir diatur
+
+        function checkAndUpdatePrice() {
+            const now = new Date(); // [1], [4], [14], [19]
+            const hour = now.getHours(); // [1], [4], [14], [18], [19]
+
+            let newPriceType = '';
+
+            // 09.00-16.59 (Siang)
+            if (hour >= 9 && hour < 17) {
+                newPriceType = 'siang';
+            } 
+            // 17.00-24.00 (Malam) atau 00.00-08.59 (juga Malam)
+            else { 
+                newPriceType = 'malam';
+            }
+
+            // Jika jenis harga berubah atau ini adalah inisialisasi pertama
+            if (newPriceType !== currentPriceType) {
+                console.log(`Waktu berubah. Mengirim permintaan untuk mengatur harga ke ${newPriceType}.`);
+                sendPriceUpdateRequest(newPriceType);
+                currentPriceType = newPriceType; // Update status
+            }
+        }
+
+        async function sendPriceUpdateRequest(priceType) {
+            try {
+                const response = await fetch("{{ route('api.update_dynamic_price') }}", { // [2], [11], [12], [13]
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken // [3], [6], [8], [13], [17]
+                    },
+                    body: JSON.stringify({ price_type: priceType }) // [2]
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    console.log('Pembaruan harga berhasil:', data.message, 'Harga baru:', data.new_price);
+                    // Opsi: Tampilkan SweetAlert atau notifikasi lain
+                    // Swal.fire('Berhasil!', `Harga telah diatur ke ${data.new_price} untuk periode ${priceType}.`, 'success');
+                } else {
+                    console.error('Pembaruan harga gagal:', data.message);
+                    // Swal.fire('Gagal!', `Gagal memperbarui harga: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Terjadi kesalahan saat mengirim permintaan:', error);
+                // Swal.fire('Error!', 'Terjadi kesalahan saat mengirim permintaan pembaruan harga.', 'error');
+            }
+        }
+
+        // Jalankan pengecekan pertama kali saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAndUpdatePrice();
+            // Atur interval untuk memeriksa setiap menit (60000 ms) [9], [15], [16], [24], [25]
+            setInterval(checkAndUpdatePrice, 60 * 1000); 
+        });
+    </script>
+
     @yield('script')
 
 </body>

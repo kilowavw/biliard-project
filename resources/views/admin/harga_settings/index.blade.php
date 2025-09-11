@@ -49,18 +49,36 @@
             @method('PUT')
 
             <div class="mb-4">
-                <label for="harga_per_jam" class="block text-gray-300 text-sm font-bold mb-2">Harga Per Jam:</label>
-                <input type="number" id="harga_per_jam" name="harga_per_jam" value="{{ old('harga_per_jam', $hargaSetting->harga_per_jam ?? '') }}"
-                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 text-white @error('harga_per_jam', 'updateHarga') border-red-500 @enderror"
-                       placeholder="Masukkan harga per jam" step="1"> {{-- step="1" agar hanya menerima bilangan bulat --}}
-                @error('harga_per_jam', 'updateHarga')
+                <label for="current_harga_per_jam" class="block text-gray-300 text-sm font-bold mb-2">Harga Aktif Saat Ini:</label>
+                <input type="text" id="current_harga_per_jam" name="current_harga_per_jam" value="{{ number_format($hargaSetting->harga_per_jam, 0, ',', '.') }}"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 text-white cursor-not-allowed"
+                       readonly>
+                <p class="text-gray-400 text-xs italic mt-2">Harga ini diperbarui secara otomatis berdasarkan waktu ({{ $hargaSetting->current_active_price_type }}).</p>
+            </div>
+
+            <div class="mb-4">
+                <label for="harga_per_jam_siang" class="block text-gray-300 text-sm font-bold mb-2">Harga Per Jam (09:00 - 16:59 Siang):</label>
+                <input type="number" id="harga_per_jam_siang" name="harga_per_jam_siang" value="{{ old('harga_per_jam_siang', number_format($hargaSetting->harga_per_jam_siang ?? 0, 0, '', '')) }}"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 text-white @error('harga_per_jam_siang', 'updateHarga') border-red-500 @enderror"
+                       placeholder="Masukkan harga per jam siang" step="1">
+                @error('harga_per_jam_siang', 'updateHarga')
+                    <p class="text-red-500 text-xs italic mt-2">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="mb-4">
+                <label for="harga_per_jam_malam" class="block text-gray-300 text-sm font-bold mb-2">Harga Per Jam (17:00 - 08:59 Malam):</label>
+                <input type="number" id="harga_per_jam_malam" name="harga_per_jam_malam" value="{{ old('harga_per_jam_malam', number_format($hargaSetting->harga_per_jam_malam ?? 0, 0, '', '')) }}"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 text-white @error('harga_per_jam_malam', 'updateHarga') border-red-500 @enderror"
+                       placeholder="Masukkan harga per jam malam" step="1">
+                @error('harga_per_jam_malam', 'updateHarga')
                     <p class="text-red-500 text-xs italic mt-2">{{ $message }}</p>
                 @enderror
             </div>
 
             <div class="flex items-center justify-start">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                    Perbarui Harga
+                    Perbarui Harga Siang/Malam
                 </button>
             </div>
         </form>

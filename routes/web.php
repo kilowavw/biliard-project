@@ -3,6 +3,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\Controller;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\MejaController; // Panggil MejaController dari namespace root
@@ -56,6 +57,7 @@ Route::middleware(['auth'])->group(function () {
         // ini rute paket
         Route::resource('admin/pakets', PaketController::class)->except(['create', 'show', 'edit'])->names('admin.pakets');
 
+
     });
 
     // BOS AREA
@@ -76,6 +78,8 @@ Route::middleware(['auth'])->group(function () {
         
         Route::resource('members', MemberController::class);
         Route::post('members/{member}/extend', [MemberController::class, 'extendMembership'])->name('members.extend');
+        
+        Route::get('/control', [LampuController::class, 'index'])->name('lampu.index');
     });
 
     // KASIR AREA
@@ -104,8 +108,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/kasir/service-order', [ServiceController::class, 'kasirServiceOrderIndex'])->name('kasir.serviceOrderIndex');
         Route::post('/kasir/service-order/process', [ServiceController::class, 'processServiceOrder'])->name('kasir.processServiceOrder');
         Route::put('/kasir/service-transactions/{transaction}/update-status', [ServiceController::class, 'updateServiceTransactionPaymentStatus'])->name('kasir.updateServiceTransactionStatus'); // Untuk bayar nanti
-
-        // NEW: Rute Member
+        Route::get('/kasir/penyewaan/{penyewaan}/calculate-payment', [KasirController::class, 'calculatePaymentDetails'])->name('kasir.api.calculatePaymentDetails');
     });
 
     // Pemandu AREA (Mirip Kasir tapi tanpa pembayaran, hanya pesan dan tambah service)
@@ -131,10 +134,9 @@ Route::middleware('role:pemandu|admin|supervisor')->group(function () {
         // NEW: API untuk validasi kode member
     Route::post('/api/member/validate', [KasirController::class, 'validateMemberCode'])->name('api.member.validate');
     // NEW: API untuk mendapatkan paket khusus member
-    
     Route::get('/api/member/validate', [KasirController::class, 'validateMember'])->name('api.member.validate');
     Route::post('/api/mejas/{meja}/update-status', [MejaController::class, 'updateStatus'])->name('api.mejas.updateStatus');
-
+    Route::post('/api/update-dynamic-price', [HargaSettingController::class, 'updateDynamicPrice'])->name('api.update_dynamic_price');
     
 // Member
 Route::resource('members', MemberController::class);
@@ -145,5 +147,5 @@ Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('lapor
 Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
 Route::get('/laporan/tahunan', [LaporanController::class, 'tahunan'])->name('laporan.tahunan');
 
-Route::get('/control', [LampuController::class, 'index'])->name('lampu.index');
+Route::get('/panduan-penggunaan', [Controller::class, 'panduanPenggunaan'])->name('panduan');
 });

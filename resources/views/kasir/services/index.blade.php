@@ -122,8 +122,8 @@
             @csrf
             <div class="grid gap-4 mb-4 grid-cols-1">
                 <div>
-                    <label for="customer_name_modal" class="block mb-2 text-sm font-medium text-white">Nama Pelanggan (Opsional)</label>
-                    <input type="text" name="customer_name" id="customer_name_modal" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" placeholder="Nama Pelanggan">
+                    <label for="customer_name_modal" class="block mb-2 text-sm font-medium text-white">Nama Pelanggan</label>
+                     <input type="text" name="customer_name" id="customer_name_modal" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" placeholder="Nama Pelanggan" required>
                 </div>
                 
                 <div>

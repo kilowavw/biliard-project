@@ -69,5 +69,7 @@ class ProfilController extends Controller
 
         return view('compro/home', compact('data'));
     }
+
+    
 }
 
