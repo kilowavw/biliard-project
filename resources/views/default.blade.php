@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}"> {{-- Ini PENTING untuk AJAX --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') - Billiard</title>
 
     <!-- Font Inter -->
@@ -179,9 +179,6 @@
                     <i class="fa fa-solid fa-lightbulb mr-3"></i> Lamp Control
                 </a>
                 @endif
-                <a href="{{ route('panduan') }}" class="flex items-center px-4 py-2 rounded hover:bg-[#282828]">
-                    <i class="fa fa-solid fa-circle-info mr-3"></i> Panduan
-                </a>
                 <a onclick="event.preventDefault(); document.getElementById('logout-form').submit();" 
                class="flex items-center px-4 py-2 rounded hover:bg-[#282828] cursor-pointer">
                 <i class="fa-solid fa-right-from-bracket mr-3 text-red-500"></i> Log Out
@@ -242,14 +239,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
 
     <script>
-        // Ambil CSRF token dari meta tag
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').content; // [3], [5], [6]
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-        let currentPriceType = ''; // Untuk melacak jenis harga yang terakhir diatur
+        let currentPriceType = '';
 
         function checkAndUpdatePrice() {
-            const now = new Date(); // [1], [4], [14], [19]
-            const hour = now.getHours(); // [1], [4], [14], [18], [19]
+            const now = new Date();
+            const hour = now.getHours();
 
             let newPriceType = '';
 
@@ -262,46 +258,56 @@
                 newPriceType = 'malam';
             }
 
-            // Jika jenis harga berubah atau ini adalah inisialisasi pertama
             if (newPriceType !== currentPriceType) {
                 console.log(`Waktu berubah. Mengirim permintaan untuk mengatur harga ke ${newPriceType}.`);
                 sendPriceUpdateRequest(newPriceType);
-                currentPriceType = newPriceType; // Update status
+                // currentPriceType akan diperbarui di dalam sendPriceUpdateRequest jika sukses.
+                // Ini mencegah pengiriman berulang jika ada masalah dengan update server.
             }
         }
 
         async function sendPriceUpdateRequest(priceType) {
             try {
-                const response = await fetch("{{ route('api.update_dynamic_price') }}", { // [2], [11], [12], [13]
+                const response = await fetch("{{ route('api.update_dynamic_price') }}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken // [3], [6], [8], [13], [17]
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest' // Tambahkan header ini
                     },
-                    body: JSON.stringify({ price_type: priceType }) // [2]
+                    body: JSON.stringify({ price_type: priceType })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
                     console.log('Pembaruan harga berhasil:', data.message, 'Harga baru:', data.new_price);
-                    // Opsi: Tampilkan SweetAlert atau notifikasi lain
+                    currentPriceType = priceType; // Update status hanya jika sukses
+                    // Optional: Tampilkan SweetAlert atau notifikasi lain
                     // Swal.fire('Berhasil!', `Harga telah diatur ke ${data.new_price} untuk periode ${priceType}.`, 'success');
                 } else {
                     console.error('Pembaruan harga gagal:', data.message);
-                    // Swal.fire('Gagal!', `Gagal memperbarui harga: ${data.message}`, 'error');
+                    Swal.fire('Gagal!', `Gagal memperbarui harga: ${data.message}`, 'error'); // Tampilkan error ke pengguna
                 }
             } catch (error) {
                 console.error('Terjadi kesalahan saat mengirim permintaan:', error);
-                // Swal.fire('Error!', 'Terjadi kesalahan saat mengirim permintaan pembaruan harga.', 'error');
+                Swal.fire('Error!', 'Terjadi kesalahan saat mengirim permintaan pembaruan harga.', 'error'); // Tampilkan error
             }
         }
 
-        // Jalankan pengecekan pertama kali saat halaman dimuat
         document.addEventListener('DOMContentLoaded', () => {
-            checkAndUpdatePrice();
-            // Atur interval untuk memeriksa setiap menit (60000 ms) [9], [15], [16], [24], [25]
-            setInterval(checkAndUpdatePrice, 60 * 1000); 
+            // Panggil sekali saat dimuat untuk mengatur harga awal dan currentPriceType
+            const now = new Date();
+            const hour = now.getHours();
+            if (hour >= 9 && hour < 17) {
+                currentPriceType = 'siang';
+            } else {
+                currentPriceType = 'malam';
+            }
+            // Lalu jalankan pengecekan untuk memastikan update
+            checkAndUpdatePrice(); 
+            
+            setInterval(checkAndUpdatePrice, 60 * 1000); // Periksa setiap menit
         });
     </script>
 

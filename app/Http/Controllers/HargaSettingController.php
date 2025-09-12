@@ -90,26 +90,37 @@ class HargaSettingController extends Controller
      */
     public function updateDynamicPrice(Request $request)
     {
-        // Pastikan permintaan ini datang dari AJAX dan memiliki token CSRF
+        Log::info('Permintaan updateDynamicPrice diterima.', ['is_ajax' => $request->ajax(), 'has_price_type' => $request->has('price_type'), 'price_type' => $request->input('price_type')]);
+
+        // Periksa apakah ini permintaan AJAX dan memiliki 'price_type'
+        // $request->ajax() akan berfungsi jika header 'X-Requested-With: XMLHttpRequest' dikirim dari JS
         if ($request->ajax() && $request->has('price_type')) {
             $hargaSetting = HargaSetting::firstOrCreate();
 
             $priceToSet = 0;
-            if ($request->price_type === 'siang') {
+            $priceType = $request->input('price_type'); // Gunakan input() untuk mengambil data dari JSON body
+
+            if ($priceType === 'siang') {
                 $priceToSet = $hargaSetting->harga_per_jam_siang;
-            } elseif ($request->price_type === 'malam') {
+            } elseif ($priceType === 'malam') {
                 $priceToSet = $hargaSetting->harga_per_jam_malam;
+            } else {
+                Log::warning('Permintaan updateDynamicPrice: price_type tidak valid.', ['price_type' => $priceType]);
+                return response()->json(['success' => false, 'message' => 'Tipe harga tidak valid.'], 400);
             }
 
+            // Hanya update jika harga memang berbeda untuk menghindari operasi DB yang tidak perlu
             if ($hargaSetting->harga_per_jam !== $priceToSet) {
                 $hargaSetting->update(['harga_per_jam' => $priceToSet]);
-                Log::info("Harga per jam diperbarui menjadi {$priceToSet} ({$request->price_type}) via JavaScript.");
+                Log::info("Harga per jam diperbarui menjadi {$priceToSet} ({$priceType}) via JavaScript.");
                 return response()->json(['success' => true, 'message' => 'Harga per jam berhasil diperbarui.', 'new_price' => $priceToSet]);
             }
 
+            Log::info("Harga per jam sudah sesuai: {$hargaSetting->harga_per_jam} ({$priceType}).");
             return response()->json(['success' => false, 'message' => 'Harga per jam sudah sesuai.', 'current_price' => $hargaSetting->harga_per_jam]);
         }
 
+        Log::warning('Permintaan tidak valid ke updateDynamicPrice.', ['is_ajax' => $request->ajax(), 'has_price_type' => $request->has('price_type')]);
         return response()->json(['success' => false, 'message' => 'Permintaan tidak valid.'], 400);
     }
 }

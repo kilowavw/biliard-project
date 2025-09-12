@@ -49,18 +49,16 @@
                     </div>
                 </div>
                 <!-- Item 3 -->
-                @if(auth()->user()->role == 'admin' || auth()->user()->role == 'bos')
                 <div class="py-3">
                     <button @click="open === 3 ? open = null : open = 3"
                         class="w-full flex justify-between items-center font-semibold hover:text-green-400 transition">
-                        Harga main sepuasnya berbeda ?
+                        Setting Harga untuk pagi dan malam
                         <i :class="open === 3 ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"></i>
                     </button>
                     <div x-show="open === 3" x-collapse class="mt-2 text-gray-300">
-                        Karena keterbatasan sistem untuk sementara waktu pada pembayaran main sepuasnya ada selisih Rp.200-Rp.500 dengan yang masuk ke rekap nilai
+                       Untuk sementara waktu selalu buka menu harga untuk mengganti harga pagi dan malam                    
                     </div>
                 </div>
-                @endif
             </div>
         </div>
 

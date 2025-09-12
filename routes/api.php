@@ -33,4 +33,6 @@ Route::get('/get-server-time', function () {
     return response()->json([
         'serverTime' => now()->toIso8601String()
     ]);
+
+Route::post('/update-dynamic-price', [HargaSettingController::class, 'updateDynamicPrice']);
 });
