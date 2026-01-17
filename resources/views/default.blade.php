@@ -34,6 +34,12 @@
     <!-- Alphine -->
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
+    {{-- Chart.js untuk Doughnut Chart --}}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {{-- ApexCharts untuk Bar Charts --}}
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script>
+
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -179,6 +185,9 @@
                     <i class="fa fa-solid fa-lightbulb mr-3"></i> Lamp Control
                 </a>
                 @endif
+                <a href="{{ route('panduan') }}" class="flex items-center px-4 py-2 rounded hover:bg-[#282828]">
+                    <i class="fa fa-solid fa-circle-info mr-3"></i> Panduan
+                </a>
                 <a onclick="event.preventDefault(); document.getElementById('logout-form').submit();" 
                class="flex items-center px-4 py-2 rounded hover:bg-[#282828] cursor-pointer">
                 <i class="fa-solid fa-right-from-bracket mr-3 text-red-500"></i> Log Out
@@ -186,10 +195,8 @@
             </nav>
 
             <!-- Optional: Scrollable playlist list -->
-            <div class="px-6 py-4 text-sm text-gray-500 hidden md:block">
-                <ul class="space-y-1">
-                    <li><a href="#" class="hover:text-white">Made by Rakasnsh</a></li>
-                </ul>
+             <div class="px-2 mt-6 text-sm space-y-1 text-gray-400">
+                Made by
             </div>
     </aside>
 
@@ -284,7 +291,7 @@
                     console.log('Pembaruan harga berhasil:', data.message, 'Harga baru:', data.new_price);
                     currentPriceType = priceType; // Update status hanya jika sukses
                     // Optional: Tampilkan SweetAlert atau notifikasi lain
-                    // Swal.fire('Berhasil!', `Harga telah diatur ke ${data.new_price} untuk periode ${priceType}.`, 'success');
+                    Swal.fire('Berhasil!', `Harga telah diatur ke ${data.new_price} untuk periode ${priceType}.`, 'success');
                 } else {
                     console.error('Pembaruan harga gagal:', data.message);
                     Swal.fire('Gagal!', `Gagal memperbarui harga: ${data.message}`, 'error'); // Tampilkan error ke pengguna

@@ -9,16 +9,54 @@
 // $penyewaansPaginated, $serviceTransactionsPaginated, $totalPendapatanNett, $paymentMethodDistribution, $pendapatanPerMeja
 // $topKasir, $topPemandu, $chartLabelsMonthly, $chartDataMonthly, $year, $years
 // $TOP_PERFORMERS_LIMIT (dari konstanta controller)
+// NEW: $totalPendapatanPenyewaanMurni, $totalPendapatanLayananGabungan, $qrisTotal, $cashTotal
 
 $penyewaanHeaders = [
-    'ID', 'Nama Penyewa', 'Meja', 'Durasi (Jam)', 'Diskon', 'Total Bayar',
-    'Waktu Mulai', 'Waktu Selesai', 'Status', 'Metode Bayar', 'Kasir', 'Pemandu'
+    'ID' => 'id',
+    'Nama Penyewa' => 'nama_penyewa',
+    'Meja' => 'meja.nama_meja',
+    'Paket' => 'paket.nama_paket',
+    'Durasi (Jam)' => 'durasi_jam',
+    'Harga/Jam' => 'harga_per_jam',
+    'Total Bayar' => 'total_bayar',
+    'Detail Service' => null,
+    'Total Service' => 'total_service',
+    'Diskon' => 'diskon_persen',
+    'Status' => 'status',
+    'Metode Bayar' => 'is_qris',
+    'Kasir' => 'kasir.name',
+    'Pemandu' => 'pemandu.name',
+    'Waktu Mulai' => 'waktu_mulai',
+    'Waktu Selesai' => 'waktu_selesai',
 ];
 
 $serviceTransactionHeaders = [
-    'ID', 'Nama Pelanggan', 'Detail Layanan', 'Diskon', 'Total Bayar',
-    'Waktu Transaksi', 'Status Pembayaran', 'Metode Bayar', 'Kasir'
+    'ID' => 'id',
+    'Nama Pelanggan' => 'customer_name',
+    'Detail Layanan' => null,
+    'Diskon' => 'diskon_persen',
+    'Total Bayar' => 'total_bayar',
+    'Waktu Transaksi' => 'transaction_time',
+    'Status Pembayaran' => 'payment_status',
+    'Metode Bayar' => 'payment_method',
+    'Kasir' => 'kasir.name',
 ];
+
+// Siapkan data untuk Alpine.js. Pastikan ini adalah array of objects.
+$penyewaansData = $penyewaansPaginated->getCollection()->map(function($item) {
+    $item->meja_nama_meja = $item->meja->nama_meja ?? null;
+    $item->paket_nama_paket = $item->paket->nama_paket ?? null;
+    $item->kasir_name = $item->kasir->name ?? null;
+    $item->pemandu_name = $item->pemandu->name ?? null;
+    $item->service_detail_parsed = is_string($item->service_detail) ? json_decode($item->service_detail, true) : ($item->service_detail ?? []);
+    return $item;
+})->toArray();
+
+$serviceTransactionsData = $serviceTransactionsPaginated->getCollection()->map(function($item) {
+    $item->kasir_name = $item->kasir->name ?? null;
+    $item->service_detail_parsed = is_string($item->service_detail) ? json_decode($item->service_detail, true) : ($item->service_detail ?? []);
+    return $item;
+})->toArray();
 ?>
 
 <div class="container mx-auto p-4 md:p-6 bg-[#121212] text-white min-h-screen">
@@ -31,7 +69,7 @@ $serviceTransactionHeaders = [
                     <i class="fa-solid fa-calendar-day mr-3"></i> Laporan Harian
                 </a>
 
-        {{-- Link untuk laporan tahunan --}}
+        {{-- Link untuk laporan bulanan --}}
         <a href="{{ route('laporan.bulanan') }}" class="flex items-center px-4 py-2 rounded
                     {{ request()->routeIs('laporan.bulanan') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-calendar-days mr-3"></i> Laporan Bulanan
@@ -41,6 +79,13 @@ $serviceTransactionHeaders = [
                     {{ request()->routeIs('laporan.tahunan') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
                     <i class="fa-solid fa-calendar-days mr-3"></i> Laporan Tahunan
                 </a>
+
+        {{-- Link untuk laporan Stok --}}
+        <a href="{{ route('laporan.stok') }}" class="flex items-center px-4 py-2 rounded 
+                     {{ request()->routeIs('laporan.stok') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
+                     <i class="fa-solid fa-boxes-stacked mr-3"></i> Laporan Stok
+                </a>
+                
         <label for="report-year" class="block text-sm font-medium text-white">Pilih Tahun:</label>
         <select id="report-year" name="year"
                 class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-2.5">
@@ -51,18 +96,74 @@ $serviceTransactionHeaders = [
         <button type="submit" class="hidden">Submit</button>
     </form>
 
-    {{-- Total Pendapatan Tahunan --}}
+    {{-- Total Pendapatan & Ringkasan Card --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {{-- Total Pendapatan Nett --}}
         <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md flex items-center justify-between border border-gray-700">
             <div>
                 <p class="text-sm font-medium text-gray-400">Total Pendapatan (Nett) Tahun {{ $year }}</p>
-                <p id="total-pendapatan" class="text-3xl font-bold text-white mt-1">Rp {{ number_format($totalPendapatanNett, 0, ',', '.') }}</p>
+                <p class="text-3xl font-bold text-white mt-1">
+                    Rp {{ number_format($totalPendapatanNett, 0, ',', '.') }}
+                </p>
             </div>
             <div class="p-3 bg-blue-900 rounded-full">
                 <i class="fa-solid fa-rupiah-sign text-blue-300 text-2xl"></i>
             </div>
         </div>
+    
+        {{-- Omzet Billiard Murni --}}
+        <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md flex items-center justify-between border border-gray-700">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Omzet Meja Billiard Murni</p>
+                <p class="text-3xl font-bold text-white mt-1">
+                    Rp {{ number_format($totalPendapatanPenyewaanMurni, 0, ',', '.') }}
+                </p>
+            </div>
+            <div class="p-3 bg-green-900 rounded-full">
+                <i class="fa-solid fa-table-tennis-paddle-ball text-green-300 text-2xl"></i>
+            </div>
+        </div>
+    
+        {{-- Omzet Layanan (Gabungan) --}}
+        <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md flex items-center justify-between border border-gray-700">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Omzet Layanan & Produk</p>
+                <p class="text-3xl font-bold text-white mt-1">
+                    Rp {{ number_format($totalPendapatanLayananGabungan, 0, ',', '.') }}
+                </p>
+            </div>
+            <div class="p-3 bg-yellow-900 rounded-full">
+                <i class="fa-solid fa-burger text-yellow-300 text-2xl"></i>
+            </div>
+        </div>
+    
+        {{-- Total QRIS --}}
+        <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md flex items-center justify-between border border-gray-700">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Total Pembayaran QRIS</p>
+                <p class="text-3xl font-bold text-white mt-1">
+                    Rp {{ number_format($qrisTotal, 0, ',', '.') }}
+                </p>
+            </div>
+            <div class="p-3 bg-purple-900 rounded-full">
+                <i class="fa-solid fa-qrcode text-purple-300 text-2xl"></i>
+            </div>
+        </div>
+        
+        {{-- Total Cash --}}
+        <div class="bg-[#1e1e1e] p-6 rounded-lg shadow-md flex items-center justify-between border border-gray-700">
+            <div>
+                <p class="text-sm font-medium text-gray-400">Total Pembayaran Cash</p>
+                <p class="text-3xl font-bold text-white mt-1">
+                    Rp {{ number_format($cashTotal, 0, ',', '.') }}
+                </p>
+            </div>
+            <div class="p-3 bg-red-900 rounded-full">
+                <i class="fa-solid fa-money-bill-wave text-red-300 text-2xl"></i>
+            </div>
+        </div>
     </div>
+    
 
     {{-- Grafik Tren Pendapatan Bulanan (ApexCharts Bar) --}}
     <div class="w-full bg-[#1e1e1e] rounded-lg shadow dark:bg-gray-800 p-4 md:p-6 mb-8 border border-gray-700">
@@ -145,36 +246,142 @@ $serviceTransactionHeaders = [
 
     {{-- Detail Transaksi Penyewaan --}}
     <h2 class="text-xl font-semibold mb-4 text-white mt-8">Detail Transaksi Penyewaan Tahun {{ $year }}</h2>
-    <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
+    <div class="mb-4">
+        <input type="text" x-model="searchPenyewaan" placeholder="Cari penyewaan..."
+               class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mb-4">
+    </div>
+
+    <div x-data="{
+        penyewaans: {{ json_encode($penyewaansData) }},
+        searchPenyewaan: '',
+        sortColumnPenyewaan: 'id',
+        sortDirectionPenyewaan: 'asc',
+
+        get filteredPenyewaans() {
+            return this.penyewaans.filter(item => {
+                const search = this.searchPenyewaan.toLowerCase();
+                return item.nama_penyewa.toLowerCase().includes(search) ||
+                       (item.meja_nama_meja && item.meja_nama_meja.toLowerCase().includes(search)) ||
+                       (item.paket_nama_paket && item.paket_nama_paket.toLowerCase().includes(search)) ||
+                       item.status.toLowerCase().includes(search) ||
+                       (item.kasir_name && item.kasir_name.toLowerCase().includes(search));
+            }).sort((a, b) => {
+                let valA, valB;
+                let column = this.sortColumnPenyewaan;
+
+                if (column === 'meja.nama_meja') {
+                    valA = a.meja_nama_meja;
+                    valB = b.meja_nama_meja;
+                } else if (column === 'paket.nama_paket') {
+                    valA = a.paket_nama_paket;
+                    valB = b.paket_nama_paket;
+                } else if (column === 'kasir.name') {
+                    valA = a.kasir_name;
+                    valB = b.kasir_name;
+                } else if (column === 'pemandu.name') {
+                    valA = a.pemandu_name;
+                    valB = b.pemandu_name;
+                } else {
+                    valA = a[column];
+                    valB = b[column];
+                }
+
+                if (valA === null || valA === undefined) valA = '';
+                if (valB === null || valB === undefined) valB = '';
+
+                if (typeof valA === 'string' || typeof valA === 'number') {
+                    if (this.sortDirectionPenyewaan === 'asc') {
+                        return (valA > valB) ? 1 : ((valA < valB) ? -1 : 0);
+                    } else {
+                        return (valA < valB) ? 1 : ((valA > valB) ? -1 : 0);
+                    }
+                }
+                return 0;
+            });
+        },
+
+        sortByPenyewaan(column) {
+            if (this.sortColumnPenyewaan === column) {
+                this.sortDirectionPenyewaan = this.sortDirectionPenyewaan === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumnPenyewaan = column;
+                this.sortDirectionPenyewaan = 'asc';
+            }
+        },
+
+        getSortIconPenyewaan(column) {
+            if (column === null) return '';
+            if (this.sortColumnPenyewaan === column) {
+                return this.sortDirectionPenyewaan === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+            return 'fas fa-sort';
+        }
+    }" class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
             <thead class="text-xs text-gray-700 uppercase bg-gray-700 text-white">
                 <tr>
-                    @foreach($penyewaanHeaders as $header)
-                        <th scope="col" class="px-6 py-3">{{ $header }}</th>
+                    @foreach($penyewaanHeaders as $header => $column)
+                        <th scope="col" class="px-6 py-3 @if($column) cursor-pointer hover:bg-gray-600 @endif"
+                            @if($column) @click="sortByPenyewaan('{{ $column }}')" @endif>
+                            {{ $header }}
+                            @if($column)
+                                <i class="ml-1" :class="getSortIconPenyewaan('{{ $column }}')"></i>
+                            @endif
+                        </th>
                     @endforeach
                 </tr>
             </thead>
             <tbody>
-                @forelse($penyewaansPaginated as $item)
-                    <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
-                        <td class="px-6 py-4">{{ $item->id }}</td>
-                        <td class="px-6 py-4">{{ $item->nama_penyewa }}</td>
-                        <td class="px-6 py-4">{{ $item->meja->nama_meja ?? $item->meja_id }}</td>
-                        <td class="px-6 py-4">{{ $item->durasi_jam }}</td>
-                        <td class="px-6 py-4">{{ number_format($item->diskon_amount ?? ($item->diskon_persen ? ($item->diskon_persen/100 * $item->total_bayar) : 0), 0, ',', '.') }} ({{ $item->diskon_persen ?? 0 }}%)</td>
-                        <td class="px-6 py-4">{{ number_format($item->total_bayar, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ $item->waktu_mulai->format('d/m/Y H:i:s') }}</td>
-                        <td class="px-6 py-4">{{ $item->waktu_selesai ? $item->waktu_selesai->format('d/m/Y H:i:s') : '-' }}</td>
-                        <td class="px-6 py-4">{{ $item->status }}</td>
-                        <td class="px-6 py-4">{{ $item->is_qris ? 'QRIS' : 'Cash' }}</td>
-                        <td class="px-6 py-4">{{ $item->kasir->name ?? '-' }}</td>
-                        <td class="px-6 py-4">{{ $item->pemandu->name ?? '-' }}</td>
-                    </tr>
-                @empty
+                <template x-if="filteredPenyewaans.length === 0">
                     <tr>
-                        <td colspan="{{ count($penyewaanHeaders) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada transaksi penyewaan untuk tahun ini.</td>
+                        <td colspan="{{ count($penyewaanHeaders) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada transaksi penyewaan untuk tahun ini atau tidak ditemukan.</td>
                     </tr>
-                @endforelse
+                </template>
+                <template x-for="item in filteredPenyewaans" :key="item.id">
+                    <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
+                        <td class="px-6 py-4" x-text="item.id"></td>
+                        <td class="px-6 py-4" x-text="item.nama_penyewa"></td>
+                        <td class="px-6 py-4" x-text="item.meja_nama_meja ? item.meja_nama_meja : item.meja_id"></td>
+                        <td class="px-6 py-4" x-text="item.paket_nama_paket ? item.paket_nama_paket : '-'"></td>
+                        <td class="px-6 py-4" x-text="item.durasi_jam"></td>
+                        <td class="px-6 py-4" x-text="fmtRp(item.harga_per_jam)"></td>
+                        <td class="px-6 py-4" x-text="fmtRp(item.total_bayar)"></td>
+                        <td class="px-6 py-4">
+                            <template x-if="item.service_detail_parsed && item.service_detail_parsed.length > 0">
+                                <div x-data="{ showServiceTooltip: false }" class="relative inline-block">
+                                    <span x-on:mouseenter="showServiceTooltip = true" x-on:mouseleave="showServiceTooltip = false" class="cursor-pointer text-blue-400 hover:text-blue-200">
+                                        Lihat Detail <i class="fas fa-info-circle ml-1"></i>
+                                    </span>
+                                    <div x-show="showServiceTooltip"
+                                        x-transition:enter="transition ease-out duration-200"
+                                        x-transition:enter-start="opacity-0 translate-y-1"
+                                        x-transition:enter-end="opacity-100 translate-y-0"
+                                        x-transition:leave="transition ease-in duration-150"
+                                        x-transition:leave-start="opacity-100 translate-y-0"
+                                        x-transition:leave-end="opacity-0 translate-y-1"
+                                        class="absolute z-10 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg left-1/2 -translate-x-1/2 bottom-full mb-2"
+                                        style="display: none;">
+                                        <h4 class="font-bold mb-1">Daftar Layanan:</h4>
+                                        <ul class="list-disc list-inside">
+                                            <template x-for="service in item.service_detail_parsed" :key="service.id">
+                                                <li x-text="`${service.nama} (${service.jumlah}x) - ${fmtRp(service.subtotal)}`"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-else>-</template>
+                        </td>
+                        <td class="px-6 py-4" x-text="fmtRp(item.total_service)"></td>
+                        <td class="px-6 py-4" x-text="`${item.diskon_persen ?? 0}%`"></td>
+                        <td class="px-6 py-4" x-text="item.status"></td>
+                        <td class="px-6 py-4" x-text="item.is_qris ? 'QRIS' : 'Cash'"></td>
+                        <td class="px-6 py-4" x-text="item.kasir_name ? item.kasir_name : '-'"></td>
+                        <td class="px-6 py-4" x-text="item.pemandu_name ? item.pemandu_name : '-'"></td>
+                        <td class="px-6 py-4" x-text="formatDateTime(item.waktu_mulai)"></td>
+                        <td class="px-6 py-4" x-text="item.waktu_selesai ? formatDateTime(item.waktu_selesai) : '-'"></td>
+                    </tr>
+                </template>
             </tbody>
         </table>
     </div>
@@ -184,49 +391,126 @@ $serviceTransactionHeaders = [
 
     {{-- Detail Transaksi Layanan --}}
     <h2 class="text-xl font-semibold mb-4 text-white mt-8">Detail Transaksi Layanan Tahun {{ $year }}</h2>
-    <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
+    <div class="mb-4">
+        <input type="text" x-model="searchService" placeholder="Cari transaksi layanan..."
+               class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mb-4">
+    </div>
+
+    <div x-data="{
+        serviceTransactions: {{ json_encode($serviceTransactionsData) }},
+        searchService: '',
+        sortColumnService: 'id',
+        sortDirectionService: 'asc',
+
+        get filteredServiceTransactions() {
+            return this.serviceTransactions.filter(item => {
+                const search = this.searchService.toLowerCase();
+                return item.customer_name.toLowerCase().includes(search) ||
+                       item.payment_method.toLowerCase().includes(search) ||
+                       item.payment_status.toLowerCase().includes(search) ||
+                       (item.kasir_name && item.kasir_name.toLowerCase().includes(search));
+            }).sort((a, b) => {
+                let valA, valB;
+                let column = this.sortColumnService;
+
+                if (column === 'kasir.name') {
+                    valA = a.kasir_name;
+                    valB = b.kasir_name;
+                }
+                else {
+                    valA = a[column];
+                    valB = b[column];
+                }
+
+                if (valA === null || valA === undefined) valA = '';
+                if (valB === null || valB === undefined) valB = '';
+
+                if (typeof valA === 'string' || typeof valA === 'number') {
+                    if (this.sortDirectionService === 'asc') {
+                        return (valA > valB) ? 1 : ((valA < valB) ? -1 : 0);
+                    } else {
+                        return (valA < valB) ? 1 : ((valA > valB) ? -1 : 0);
+                    }
+                }
+                return 0;
+            });
+        },
+
+        sortByService(column) {
+            if (this.sortColumnService === column) {
+                this.sortDirectionService = this.sortDirectionService === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumnService = column;
+                this.sortDirectionService = 'asc';
+            }
+        },
+
+        getSortIconService(column) {
+            if (column === null) return '';
+            if (this.sortColumnService === column) {
+                return this.sortDirectionService === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+            return 'fas fa-sort';
+        }
+    }" class="relative overflow-x-auto shadow-md sm:rounded-lg mb-4">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
             <thead class="text-xs text-gray-700 uppercase bg-gray-700 text-white">
                 <tr>
-                    @foreach($serviceTransactionHeaders as $header)
-                        <th scope="col" class="px-6 py-3">{{ $header }}</th>
+                    @foreach($serviceTransactionHeaders as $header => $column)
+                        <th scope="col" class="px-6 py-3 @if($column) cursor-pointer hover:bg-gray-600 @endif"
+                            @if($column) @click="sortByService('{{ $column }}')" @endif>
+                            {{ $header }}
+                            @if($column)
+                                <i class="ml-1" :class="getSortIconService('{{ $column }}')"></i>
+                            @endif
+                        </th>
                     @endforeach
                 </tr>
             </thead>
             <tbody>
-                @forelse($serviceTransactionsPaginated as $item)
-                    <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
-                        <td class="px-6 py-4">{{ $item->id }}</td>
-                        <td class="px-6 py-4">{{ $item->customer_name }}</td>
-                        <td class="px-6 py-4">
-                            @php
-                                $services = is_string($item->service_detail)
-                                    ? json_decode($item->service_detail, true)
-                                    : $item->service_detail;
-                            @endphp
-
-                            @if(!empty($services))
-                                <ul class="list-disc list-inside text-gray-400">
-                                    @foreach($services as $service)
-                                        <li>{{ $service['nama'] }} ({{ $service['jumlah'] }}x) - Rp {{ number_format($service['subtotal'], 0, ',', '.') }}</li>
-                                    @endforeach
-                                </ul>
-                            @else
-                                -
-                            @endif
-                        </td>
-                        <td class="px-6 py-4">{{ number_format($item->diskon_amount ?? ($item->diskon_persen ? ($item->diskon_persen/100 * $item->total_bayar) : 0), 0, ',', '.') }} ({{ $item->diskon_persen ?? 0 }}%)</td>
-                        <td class="px-6 py-4">{{ number_format($item->total_bayar, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">{{ $item->transaction_time->format('d/m/Y H:i:s') }}</td>
-                        <td class="px-6 py-4">{{ $item->payment_status }}</td>
-                        <td class="px-6 py-4">{{ $item->payment_method }}</td>
-                        <td class="px-6 py-4">{{ $item->kasir->name ?? '-' }}</td>
-                    </tr>
-                @empty
+                <template x-if="filteredServiceTransactions.length === 0">
                     <tr>
-                        <td colspan="{{ count($serviceTransactionHeaders) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada transaksi layanan untuk tahun ini.</td>
+                        <td colspan="{{ count($serviceTransactionHeaders) }}" class="px-6 py-4 text-center text-gray-400">Tidak ada transaksi layanan untuk tahun ini atau tidak ditemukan.</td>
                     </tr>
-                @endforelse
+                </template>
+                <template x-for="item in filteredServiceTransactions" :key="item.id">
+                    <tr class="bg-[#1e1e1e] border-b border-gray-700 hover:bg-[#232323] transition-colors duration-200">
+                        <td class="px-6 py-4" x-text="item.id"></td>
+                        <td class="px-6 py-4" x-text="item.customer_name"></td>
+                        <td class="px-6 py-4">
+                            <template x-if="item.service_detail_parsed && item.service_detail_parsed.length > 0">
+                                <div x-data="{ showServiceTooltip: false }" class="relative inline-block">
+                                    <span x-on:mouseenter="showServiceTooltip = true" x-on:mouseleave="showServiceTooltip = false" class="cursor-pointer text-blue-400 hover:text-blue-200">
+                                        Lihat Detail <i class="fas fa-info-circle ml-1"></i>
+                                    </span>
+                                    <div x-show="showServiceTooltip"
+                                        x-transition:enter="transition ease-out duration-200"
+                                        x-transition:enter-start="opacity-0 translate-y-1"
+                                        x-transition:enter-end="opacity-100 translate-y-0"
+                                        x-transition:leave="transition ease-in duration-150"
+                                        x-transition:leave-start="opacity-100 translate-y-0"
+                                        x-transition:leave-end="opacity-0 translate-y-1"
+                                        class="absolute z-10 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg left-1/2 -translate-x-1/2 bottom-full mb-2"
+                                        style="display: none;">
+                                        <h4 class="font-bold mb-1">Daftar Layanan:</h4>
+                                        <ul class="list-disc list-inside">
+                                            <template x-for="service in item.service_detail_parsed" :key="service.id">
+                                                <li x-text="`${service.nama} (${service.jumlah}x) - ${fmtRp(service.subtotal ?? (service.harga_satuan * service.jumlah))}`"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-else>-</template>
+                        </td>
+                        <td class="px-6 py-4" x-text="`${item.diskon_persen ?? 0}%`"></td>
+                        <td class="px-6 py-4" x-text="fmtRp(item.total_bayar)"></td>
+                        <td class="px-6 py-4" x-text="formatDateTime(item.transaction_time)"></td>
+                        <td class="px-6 py-4" x-text="item.payment_status"></td>
+                        <td class="px-6 py-4" x-text="item.payment_method"></td>
+                        <td class="px-6 py-4" x-text="item.kasir_name ? item.kasir_name : '-'"></td>
+                    </tr>
+                </template>
             </tbody>
         </table>
     </div>
@@ -238,13 +522,13 @@ $serviceTransactionHeaders = [
 @endsection
 
 @section('script')
-{{-- Chart.js untuk Doughnut Chart --}}
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{{-- ApexCharts untuk Bar Charts --}}
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script>
 
 <script>
     const fmtRp = (amount) => {
+        if (amount === null || amount === undefined) return 'Rp 0';
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
@@ -252,7 +536,18 @@ $serviceTransactionHeaders = [
         }).format(amount);
     };
 
-    // ... (Script untuk paymentMethodChart, monthlyRevenueChartOptions, kasirChartOptions, pemanduChartOptions tetap sama) ...
+    const formatDateTime = (datetimeString) => {
+        if (!datetimeString) return '-';
+        const date = new Date(datetimeString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    };
+
     // --- Script untuk Chart.js (Doughnut Chart: Distribusi Pembayaran) ---
     let paymentMethodChartInstance = null;
     const paymentMethodDistributionData = @json($paymentMethodDistribution);
@@ -518,4 +813,3 @@ $serviceTransactionHeaders = [
         });
     });
 </script>
-@endsection

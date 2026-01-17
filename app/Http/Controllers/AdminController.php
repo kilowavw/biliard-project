@@ -30,7 +30,7 @@ class AdminController extends Controller
 
     public function users()
     {
-        $users = User::all();
+        $users = User::where('name', '!=', 'developer')->get();
         return view('admin.users', compact('users'));
     }
 
@@ -39,7 +39,7 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
+            'password' => 'required|string',
             'role' => ['required', Rule::in(['admin', 'bos', 'supervisor', 'kasir', 'pemandu'])], // Tambah 'pemandu'
         ]);
 

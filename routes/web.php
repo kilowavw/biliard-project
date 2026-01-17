@@ -6,7 +6,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\KasirController;
-use App\Http\Controllers\MejaController; // Panggil MejaController dari namespace root
+use App\Http\Controllers\MejaController;
 use App\Http\Controllers\HargaSettingController;
 use App\Http\Controllers\ServiceController; 
 use App\Http\Controllers\KuponController; 
@@ -70,86 +70,111 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/harga-settings', [HargaSettingController::class, 'index'])->name('admin.harga_settings.index');
         Route::put('/harga-settings', [HargaSettingController::class, 'update'])->name('admin.harga_settings.update');
         
-        // Rute members, dikelola oleh Admin|Bos
+        // Members resource for Admin/Bos, moved here for broader access if needed.
+        // If members should only be managed by Admin (CRUD), keep it in admin middleware.
+        // Assuming Admin and Bos can view/manage members.
         Route::resource('members', MemberController::class);
         Route::post('members/{member}/extend', [MemberController::class, 'extendMembership'])->name('members.extend');
         
         Route::get('/control', [LampuController::class, 'index'])->name('lampu.index');
     });
 
-    // KASIR AREA (dan Admin/Supervisor yang juga bisa akses fungsi kasir)
+    // KASIR AREA (dan Admin/Supervisor yang juga bisa akses fitur kasir)
     Route::middleware('role:kasir|admin|supervisor')->group(function () {
         Route::get('/kasir', [KasirController::class, 'dashboard'])->name('dashboard.kasir');
 
-        // ==== Rute Pemesanan LAMA (SEKARANG DINONAKTIFKAN/DIHAPUS DARI CONTROLLER) ====
-        // Route::post('/kasir/pesan-durasi', [KasirController::class, 'pesanDurasi'])->name('kasir.pesanDurasi');
-        // Route::post('/kasir/pesan-sepuasnya', [KasirController::class, 'pesanSepuasnya'])->name('kasir.pesanSepuasnya');
-        // Route::post('/kasir/pesan-paket', [KasirController::class, 'pesanPaket'])->name('kasir.pesanPaket');
-        // =========================================================================
+        // =====================================================================
+        // PERUBAHAN & PENAMBAHAN RUTE UNTUK REVISI
+        // =====================================================================
 
-        // ===== Rute Pemesanan BARU (Revisi 3: Konfirmasi Pemesanan) =====
+        // Rute lama untuk pemesanan yang digantikan oleh initiatePemesanan dan confirmPemesanan:
+        // Route::post('/kasir/pesan-durasi', [KasirController::class, 'pesanDurasi'])->name('kasir.pesanDurasi'); // DIHAPUS/DIGANTI
+        // Route::post('/kasir/pesan-sepuasnya', [KasirController::class, 'pesanSepuasnya'])->name('kasir.pesanSepuasnya'); // DIHAPUS/DIGANTI
+        // Route::post('/kasir/pesan-paket', [KasirController::class, 'pesanPaket'])->name('kasir.pesanPaket'); // DIHAPUS/DIGANTI
+        
+        // Revisi 3: Endpoint untuk memulai proses pemesanan (menyalakan lampu meja)
         Route::post('/kasir/penyewaan/initiate', [KasirController::class, 'initiatePemesanan'])->name('kasir.initiatePemesanan');
+        // Revisi 3: Endpoint untuk mengkonfirmasi pemesanan dan membuat record Penyewaan
         Route::post('/kasir/penyewaan/confirm', [KasirController::class, 'confirmPemesanan'])->name('kasir.confirmPemesanan');
+        // Revisi 3: Endpoint untuk mereset status meja jika pemesanan dibatalkan setelah initiate
         Route::post('/kasir/meja/{meja}/reset-status', [KasirController::class, 'resetMejaStatus'])->name('kasir.resetMejaStatus');
-        // ================================================================
 
+        // Revisi 1: Endpoint untuk memindahkan meja
+        Route::post('/kasir/penyewaan/{penyewaan}/transfer-meja', [KasirController::class, 'transferMeja'])->name('kasir.transferMeja');
+
+        // =====================================================================
+        // Rute yang sudah ada dan TIDAK bertabrakan, tetap dipertahankan
+        // =====================================================================
         Route::get('/kasir/api/penyewaan-aktif', [KasirController::class, 'getPenyewaanAktifJson'])->name('kasir.api.penyewaanAktif');
-
         Route::post('/kasir/penyewaan/{penyewaan}/add-duration', [KasirController::class, 'addDuration'])->name('kasir.addDuration');
         Route::post('/kasir/penyewaan/{penyewaan}/add-service', [KasirController::class, 'addService'])->name('kasir.addService');
         Route::delete('/kasir/penyewaan/{penyewaan}/remove-service', [KasirController::class, 'removeService'])->name('kasir.removeService');
-        
         Route::post('/kasir/penyewaan/{penyewaan}/bayar', [KasirController::class, 'processPayment'])->name('kasir.processPayment');
         Route::delete('/kasir/penyewaan/{penyewaan}/delete', [KasirController::class, 'deletePenyewaan'])->name('kasir.penyewaan.delete');
 
-        // ===== Rute Ubah Meja BARU (Revisi 1) =====
-        Route::post('/kasir/penyewaan/{penyewaan}/transfer-meja', [KasirController::class, 'transferMeja'])->name('kasir.transferMeja');
-        // ===========================================
-
-        // Rute untuk mendapatkan detail perhitungan pembayaran (Revisi 4 & 5)
-        Route::get('/kasir/penyewaan/{penyewaan}/calculate-payment', [KasirController::class, 'calculatePaymentDetails'])->name('kasir.api.calculatePaymentDetails');
-        
-        // Service Order (jika kasir juga menangani layanan langsung, bukan hanya meja)
+        // Rute-rute Service Controller yang diakses kasir
         Route::get('/kasir/service-order', [ServiceController::class, 'kasirServiceOrderIndex'])->name('kasir.serviceOrderIndex');
         Route::post('/kasir/service-order/process', [ServiceController::class, 'processServiceOrder'])->name('kasir.processServiceOrder');
-        Route::put('/kasir/service-transactions/{transaction}/update-status', [ServiceController::class, 'updateServiceTransactionPaymentStatus'])->name('kasir.updateServiceTransactionStatus'); // Untuk bayar nanti
+        Route::put('/kasir/service-transactions/{transaction}/update-status', [ServiceController::class, 'updateServiceTransactionPaymentStatus'])->name('kasir.updateServiceTransactionStatus');
+        
+        // Endpoint untuk menghitung detail pembayaran tampilan (sudah ada, penegasan)
+        Route::get('/kasir/penyewaan/{penyewaan}/calculate-payment', [KasirController::class, 'calculatePaymentDetails'])->name('kasir.api.calculatePaymentDetails');
     });
 
-    // Pemandu AREA (Semua fungsionalitas Kasir kecuali pembayaran dan perubahan meja, jika ini diisolasi)
+    // Pemandu AREA (Semua fungsionalitas Kasir kecuali pembayaran)
     Route::middleware('role:pemandu|admin|supervisor')->group(function () {
         Route::get('/pemandu', [PemanduController::class, 'dashboard'])->name('dashboard.pemandu');
 
-        // Pemandu juga perlu rute initiate dan confirm pemesanan jika mereka yang memulai
-        Route::post('/pemandu/penyewaan/initiate', [PemanduController::class, 'initiatePemesanan'])->name('pemandu.initiatePemesanan');
-        Route::post('/pemandu/penyewaan/confirm', [PemanduController::class, 'confirmPemesanan'])->name('pemandu.confirmPemesanan');
-        Route::post('/pemandu/meja/{meja}/reset-status', [PemanduController::class, 'resetMejaStatus'])->name('pemandu.resetMejaStatus');
-        
-        // Pemandu tidak boleh punya rute pembayaran atau delete penyewaan yang sudah dibayar.
-        // Pemandu juga tidak punya rute transfer meja.
+        // Pemandu juga perlu rute initiatePemesanan dan confirmPemesanan
+        // Route::post('/pemandu/penyewaan/initiate', [PemanduController::class, 'initiatePemesanan'])->name('pemandu.initiatePemesanan');
+        // Route::post('/pemandu/penyewaan/confirm', [PemanduController::class, 'confirmPemesanan'])->name('pemandu.confirmPemesanan');
+        // Route::post('/pemandu/meja/{meja}/reset-status', [PemanduController::class, 'resetMejaStatus'])->name('pemandu.resetMejaStatus');
+
+        // Pemandu juga bisa memindahkan meja
+        Route::post('/pemandu/penyewaan/{penyewaan}/transfer-meja', [PemanduController::class, 'transferMeja'])->name('pemandu.transferMeja');
+
+        // Rute lama untuk pemesanan pemandu yang digantikan
+        Route::post('/pemandu/pesan-durasi', [PemanduController::class, 'pesanDurasi'])->name('pemandu.pesanDurasi'); // DIHAPUS/DIGANTI
+        Route::post('/pemandu/pesan-sepuasnya', [PemanduController::class, 'pesanSepuasnya'])->name('pemandu.pesanSepuasnya'); // DIHAPUS/DIGANTI
+        Route::post('/pemandu/pesan-paket', [PemanduController::class, 'pesanPaket'])->name('pemandu.pesanPaket'); // DIHAPUS/DIGANTI
+
 
         Route::get('/pemandu/api/penyewaan-aktif', [PemanduController::class, 'getPenyewaanAktifJson'])->name('pemandu.api.penyewaanAktif');
 
         Route::post('/pemandu/penyewaan/{penyewaan}/add-duration', [PemanduController::class, 'addDuration'])->name('pemandu.addDuration');
         Route::post('/pemandu/penyewaan/{penyewaan}/add-service', [PemanduController::class, 'addService'])->name('pemandu.addService');
         Route::delete('/pemandu/penyewaan/{penyewaan}/remove-service', [PemanduController::class, 'removeService'])->name('pemandu.removeService');
+        // // Pemandu tidak memiliki rute 'bayar'
     });
-
-    // API Umum (dapat diakses oleh peran yang berbeda)
+    
+    // Rute API umum (bisa diakses oleh Kasir, Pemandu, Admin, Supervisor)
     Route::get('/api/kupon/validate', [KuponController::class, 'validateKupon'])->name('api.kupon.validate');
     Route::get('/api/services', [ServiceController::class, 'getServicesJson'])->name('api.services');
     Route::get('/api/pakets', [PaketController::class, 'getPaketsJson'])->name('api.pakets');
-    Route::post('/api/member/validate', [MemberController::class, 'validateMemberCode'])->name('api.member.validate'); // Menggunakan MemberController untuk validasi member
+    Route::get('/api/member/validate', [KasirController::class, 'validateMember'])->name('api.member.validate');
+    // Jika validateMemberCode ini untuk tujuan berbeda atau di Controller lain, pastikan namanya unik
+    // Route::post('/api/member/validate', [KasirController::class, 'validateMemberCode'])->name('api.member.validateCode'); // Contoh jika namanya harus beda
+
     Route::post('/api/mejas/{meja}/update-status', [MejaController::class, 'updateStatus'])->name('api.mejas.updateStatus');
     Route::post('/api/update-dynamic-price', [HargaSettingController::class, 'updateDynamicPrice'])->name('api.update_dynamic_price');
     
-    // Member (ini sudah di grup admin|bos, jadi dipindah saja agar tidak duplikasi)
-    // Route::resource('members', MemberController::class);
-    // Route::get('/cek-member', [MemberController::class, 'cekMember']); // Cek member mungkin perlu diakses lebih luas? Atau hanya di kasir?
+    // Member (Sudah ada di admin|bos, jadi tidak perlu di sini lagi jika memang hanya admin/bos)
+    // Jika kasir juga bisa mengelola member secara penuh (CRUD), pindahkan resource members ke sini.
+    // Saat ini, 'members' resource sudah ada di role:admin|bos, jadi yang di bawah ini duplikasi.
+    // Route::resource('members', MemberController::class); // DIHAPUS karena duplikasi dengan di atas
+    Route::get('/cek-member', [MemberController::class, 'cekMember']); // Tetap ada jika dibutuhkan oleh role lain.
 
     // Laporan
     Route::get('/laporan/harian', [LaporanController::class, 'harian'])->name('laporan.harian');
     Route::get('/laporan/bulanan', [LaporanController::class, 'bulanan'])->name('laporan.bulanan');
     Route::get('/laporan/tahunan', [LaporanController::class, 'tahunan'])->name('laporan.tahunan');
+    Route::get('/laporan/stok', [LaporanController::class, 'stok'])->name('laporan.stok');
 
     Route::get('/panduan-penggunaan', [Controller::class, 'panduanPenggunaan'])->name('panduan');
 });
+
+
+
+use App\Http\Controllers\OmzetController;
+
+Route::get('/laporan/omzet', [OmzetController::class, 'generateReport'])->name('report.omzet');

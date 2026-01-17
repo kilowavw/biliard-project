@@ -22,26 +22,23 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->only('email', 'password');
-
+    
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
-
+    
             $role = Auth::user()->role;
-            if ($role === 'admin') {
-                return redirect()->intended('/kasir');
-            } elseif ($role === 'bos') {
-                return redirect()->intended('/kasirs');
-            } elseif ($role === 'supervisor') {
-                return redirect()->intended('/kasir');
+    
+            if ($role === 'bos') {
+                return redirect()->route('dashboard.bos');
             } elseif ($role === 'pemandu') {
-                return redirect()->intended('/pemandu');    
+                return redirect()->route('dashboard.pemandu');
             } else {
-                return redirect()->intended('/kasir');
+                return redirect()->route('dashboard.kasir');
             }
         }
-
         return back()->with('login_error', true);
     }
+    
 
     public function register(Request $request)
     {

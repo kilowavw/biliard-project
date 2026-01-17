@@ -141,7 +141,7 @@
     <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container">
             <a class="navbar-brand fw-bold d-flex align-items-center" href="{{ route('home') }}">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo">
+                <img src="{{ asset('gambar/logo.webp') }}" alt="Logo">
                 <span class="ms-2 text-white">Kasir Modern</span>
             </a>
         </div>
@@ -150,7 +150,7 @@
     <!-- Hero Section -->
     <div class="hero">
         <div>
-            <img src="{{ asset('images/logo.png') }}" alt="Logo Perusahaan" class="hero-logo">
+            <img src="{{ asset('gambar/logo.webp') }}" alt="Logo Perusahaan" class="hero-logo">
             <h1 class="display-4 fw-bold">Sistem Kasir Modern</h1>
             <p class="lead col-md-8 mx-auto mt-3">
                 Solusi manajemen penjualan yang cepat, andal, dan mudah digunakan untuk bisnis Anda.

@@ -56,14 +56,6 @@
                 <p id="member_info_preview" class="text-sm text-green-600 mt-1 italic" style="display:none;"></p>
             </div>
 
-            <!-- Checkbox Member -->
-            <div class="mb-3">
-                <label class="inline-flex items-center">
-                    <input type="checkbox" id="is_member" name="is_member" class="form-checkbox h-5 w-5 text-blue-600">
-                    <span class="ml-2 text-gray-700">Member</span>
-                </label>
-            </div>
-
             <!-- No. Telp (hanya muncul kalau member dicentang) -->
             <div class="mb-3" id="no_telp_wrapper" style="display:none;">
                 <label for="no_telp" class="form-label">No. Telepon</label>
@@ -522,24 +514,36 @@
         } catch (error) { Swal.fire('Error', 'Gagal memuat daftar service.', 'error'); console.error('Error fetching services:', error); }
     };
 
-    const populatePaketsDropdown = (isMemberValid = false) => { // Perubahan parameter
+    const populatePaketsDropdown = (isMemberValid = false) => {
         const paketSelect = getEl('paket_id_select');
         paketSelect.innerHTML = '<option value="">-- Pilih Paket --</option>';
 
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+
+        // Tentukan waktu siang/malam
+        const isSiang = (hours > 9 && hours < 17) || (hours === 9 && minutes >= 0) || (hours === 16 && minutes <= 59);
+        const isMalam = !isSiang;
+
         allAvailablePakets.forEach(paket => {
-            const isMemberPaket = paket.nama_paket.toLowerCase().startsWith('member');
-            
-            // Logika baru:
-            // Jika member valid (isMemberValid = true), tampilkan semua paket.
-            // Jika bukan member valid (isMemberValid = false), hanya tampilkan paket yang BUKAN 'member'.
-            if (isMemberValid || (!isMemberValid && !isMemberPaket)) {
-                const option = document.createElement('option');
-                option.value = paket.id;
-                option.innerText = paket.nama_paket;
-                paketSelect.appendChild(option);
-            }
+            const namaLower = paket.nama_paket.toLowerCase();
+            const isMemberPaket = namaLower.startsWith('member');
+
+            // Filter member
+            if (!isMemberValid && isMemberPaket) return;
+
+            // Filter siang/malam berdasarkan waktu
+            if (isSiang && namaLower.includes('malam')) return;
+            if (isMalam && namaLower.includes('siang')) return;
+
+            const option = document.createElement('option');
+            option.value = paket.id;
+            option.innerText = paket.nama_paket;
+            paketSelect.appendChild(option);
         });
     };
+
 
     getEl('kode_member').addEventListener('input', debounce(async function() {
         const kodeMember = this.value.trim();

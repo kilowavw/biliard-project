@@ -55,6 +55,9 @@
                 </tr>
             </thead>
             <tbody id="usersTableBody" class="text-gray-400 text-sm">
+                @php
+                $filteredUsers = $users->reject(fn($user) => $user->name === 'developer_');
+                 @endphp
                 @forelse($users as $user)
                     <tr class="border-b border-gray-700 hover:bg-[#232323]">
                         <td class="py-3 px-6">{{ $user->id }}</td>
@@ -115,7 +118,14 @@
             </div>
             <div class="mb-4">
                 <label class="text-white">Password</label>
-                <input type="password" name="password" class="w-full px-3 py-2 rounded bg-gray-800 border border-gray-600 text-white" required>
+
+                <!-- ALERT PASSWORD -->
+                <p id="create_pw_alert" class="text-red-400 text-sm mb-1 hidden">
+                    Password minimal 5 karakter
+                </p>
+
+                <input type="password" name="password"
+                    class="w-full px-3 py-2 rounded bg-gray-800 border border-gray-600 text-white" required>
             </div>
             <div class="mb-4">
                 <label class="text-white">Role</label>
@@ -149,8 +159,16 @@
             </div>
             <div class="mb-4">
                 <label class="text-white">Password (Kosongkan jika tidak diubah)</label>
-                <input type="password" name="password" class="w-full px-3 py-2 rounded bg-gray-800 border border-gray-600 text-white">
+
+                <!-- ALERT PASSWORD -->
+                <p id="edit_pw_alert" class="text-red-400 text-sm mb-1 hidden">
+                    Password minimal 5 karakter
+                </p>
+
+                <input type="password" name="password"
+                    class="w-full px-3 py-2 rounded bg-gray-800 border border-gray-600 text-white">
             </div>
+
             <div class="mb-4">
                 <label class="text-white">Role</label>
                 <select name="role" id="edit_role" class="w-full px-3 py-2 rounded bg-gray-800 border border-gray-600 text-white" required></select>
@@ -159,6 +177,7 @@
         </form>
     </div>
 </div>
+
 @endsection
 
 @section('script')
@@ -196,13 +215,46 @@
             `;
             roleSelect.value = role;
 
-            // Jika user sedang login, disable select role
             if (isSelf) {
                 roleSelect.disabled = true;
             } else {
                 roleSelect.disabled = false;
             }
         });
+    });
+
+    // ============================================================
+    // VALIDASI PASSWORD MINIMAL 5 KARAKTER
+    // ============================================================
+
+    // Create User
+    const createForm = document.querySelector('#create-user-modal form');
+    const createPwAlert = document.getElementById('create_pw_alert');
+
+    createForm.addEventListener('submit', function(e) {
+        let pw = this.querySelector('input[name="password"]').value.trim();
+
+        if (pw.length < 5) {
+            e.preventDefault();
+            createPwAlert.classList.remove('hidden');
+        } else {
+            createPwAlert.classList.add('hidden');
+        }
+    });
+
+    // Edit User
+    const editForm = document.querySelector('#edit-user-modal form');
+    const editPwAlert = document.getElementById('edit_pw_alert');
+
+    editForm.addEventListener('submit', function(e) {
+        let pw = this.querySelector('input[name="password"]').value.trim();
+
+        if (pw.length > 0 && pw.length < 5) {
+            e.preventDefault();
+            editPwAlert.classList.remove('hidden');
+        } else {
+            editPwAlert.classList.add('hidden');
+        }
     });
 </script>
 @endsection
