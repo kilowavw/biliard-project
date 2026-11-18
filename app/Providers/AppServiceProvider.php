@@ -12,7 +12,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // This application does not expose token-authenticated API routes.
+        // Register this before Sanctum boots so its vendor migration is not loaded.
+        Sanctum::ignoreMigrations();
     }
 
     /**
@@ -20,9 +22,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // The application does not expose token-authenticated API routes. Keeping
-        // Sanctum's vendor migration disabled also avoids a PostgreSQL 18 index
-        // creation failure observed on Neon's pooled connection during startup.
-        Sanctum::ignoreMigrations();
+        //
     }
 }
