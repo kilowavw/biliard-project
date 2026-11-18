@@ -26,8 +26,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'login']);
 });
 
-Route::resource('events', EventController::class);
-Route::resource('pelayanan', PelayananController::class);
+Route::resource('events', EventController::class)->only(['index', 'show']);
+Route::resource('pelayanan', PelayananController::class)->only(['index', 'show']);
 
 Route::middleware(['auth'])->group(function () {
 
@@ -51,6 +51,9 @@ Route::middleware(['auth'])->group(function () {
 
         // ini rute paket
         Route::resource('admin/pakets', PaketController::class)->except(['create', 'show', 'edit'])->names('admin.pakets');
+
+        Route::resource('events', EventController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
+        Route::resource('pelayanan', PelayananController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
     });
 
     // BOS AREA
