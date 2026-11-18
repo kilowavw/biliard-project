@@ -1,0 +1,72 @@
+name: Deployment check
+
+on:
+  push:
+    branches:
+      - deploy/render-20261118
+  workflow_dispatch:
+
+jobs:
+  postgres-and-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: billiard_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d billiard_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      APP_KEY: base64:9E3lYx24vB4/Gfbmk0oX/zZi0JtStLz3XG8jrLKnZUE=
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: billiard_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      DEPLOY_ADMIN_EMAIL: deploy-check@example.com
+      DEPLOY_ADMIN_PASSWORD: DeploymentCheckOnly-9x!
+
+    steps:
+      - name: Check out deployment branch
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, pdo_pgsql, zip
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Build and seed a fresh PostgreSQL database
+        run: php artisan migrate:fresh --seed --force
+
+      - name: Verify seeded operational data
+        run: php artisan tinker --execute="throw_unless(\\App\\Models\\User::where('role', 'admin')->exists() && \\App\\Models\\Meja::count() === 21);"
+
+      - name: Run application tests
+        run: php artisan test
+
+      - name: Compile Blade templates
+        run: php artisan view:cache
+
+      - name: Build the Render container
+        run: docker build --tag proyek-billiard:deployment-check .
