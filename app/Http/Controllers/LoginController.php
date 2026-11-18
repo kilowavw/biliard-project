@@ -28,13 +28,13 @@ class LoginController extends Controller
     
             $role = Auth::user()->role;
     
-            if ($role === 'bos') {
-                return redirect()->route('dashboard.bos');
-            } elseif ($role === 'pemandu') {
-                return redirect()->route('dashboard.pemandu');
-            } else {
-                return redirect()->route('dashboard.kasir');
-            }
+            return match ($role) {
+                'admin' => redirect()->route('dashboard.admin'),
+                'bos' => redirect()->route('dashboard.bos'),
+                'pemandu' => redirect()->route('dashboard.pemandu'),
+                'supervisor' => redirect()->route('dashboard.supervisor'),
+                default => redirect()->route('dashboard.kasir'),
+            };
         }
         return back()->with('login_error', true);
     }

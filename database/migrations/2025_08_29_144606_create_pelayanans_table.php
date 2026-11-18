@@ -11,18 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('devices', function (Blueprint $table) {
+        Schema::create('pelayanans', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique(); // Contoh: 'NodeMCU_Lampu_Area1'
-            $table->string('ip_address')->nullable(); // Alamat IP terakhir dari perangkat
-            $table->timestamp('last_seen_at')->nullable(); // Kapan terakhir perangkat aktif
-
-            // Kolom baru untuk perintah yang tertunda
-            $table->string('pending_command')->nullable(); // Perintah yang menunggu untuk diambil oleh perangkat (misal: 'RESET')
-            $table->timestamp('command_sent_at')->nullable(); // Kapan perintah ini dikirim (disimpan)
-            $table->timestamp('command_executed_at')->nullable(); // Kapan perangkat melaporkan telah mengambil/menjalankan perintah
-
-            $table->timestamps(); // created_at, updated_at
+            $table->string('nama');
+            $table->enum('kategori', ['Makanan', 'Minuman', 'Rokok']);
+            $table->float('harga');
+            $table->string('gambar')->nullable();
+            $table->timestamps();
         });
     }
 
@@ -31,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('devices');
+        Schema::dropIfExists('pelayanans');
     }
 };

@@ -9,7 +9,7 @@
         <h1 class="text-2xl font-bold mb-4 text-black">Dashboard Kasir</h1>
 
         <div id="meja-container" class="grid grid-cols-1 sm:grid-cols-2 [@media(min-width:768px)_and_(max-width:870px)]:grid-cols-2
-                   [@media(min-width:871px)_and_(max-width:1025px)]:grid-cols-3 lg:grid-cols-4 gap-4 text-black">
+                       [@media(min-width:871px)_and_(max-width:1025px)]:grid-cols-3 lg:grid-cols-4 gap-4 text-black">
             @foreach ($mejas as $meja)
                 <div id="meja-card-{{ $meja->id }}"
                     class="p-4 border rounded shadow cursor-pointer transition @if($meja->status === 'dipakai') bg-green-100 @else bg-neutral-600 @endif"
@@ -595,27 +595,27 @@
 
             if (actionsCont) {
                 actionsCont.innerHTML = `
-                    @if(Auth::check() && (Auth::user()->role == 'admin' || Auth::user()->role == 'supervisor'))
-                        <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanData.id}, '${penyewaanData.meja_nama}');">
-                            <i class="fa-solid fa-trash"></i> Hapus
+                        @if(Auth::check() && (Auth::user()->role == 'admin' || Auth::user()->role == 'supervisor'))
+                            <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanData.id}, '${penyewaanData.meja_nama}');">
+                                <i class="fa-solid fa-trash"></i> Hapus
+                            </button>
+                        @endif
+                        <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanData.id});">
+                            <i class="fa-solid fa-wine-bottle"></i> Tambah Service
                         </button>
-                    @endif
-                    <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanData.id});">
-                        <i class="fa-solid fa-wine-bottle"></i> Tambah Service
-                    </button>
-                    <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran.</span>
-                    @if(Request::is('kasir*'))
-                        <button type="button" class="px-3 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600" onclick="event.preventDefault(); openPaymentModal(${penyewaanData.id});">
-                            <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
-                        </button>
-                    @endif
-                `;
+                        <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran.</span>
+                        @if(Request::is('kasir*'))
+                            <button type="button" class="px-3 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600" onclick="event.preventDefault(); openPaymentModal(${penyewaanData.id});">
+                                <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
+                            </button>
+                        @endif
+                    `;
             }
 
             @if(Request::is('kasir*'))
                 // openPaymentModal(penyewaanData.id); // Mungkin tidak perlu otomatis buka, tergantung alur user
             @endif
-        };
+            };
 
         const toggleServiceDropdown = (penyewaanId) => {
             const serviceListEl = getEl(`service-list-${penyewaanId}`);
@@ -689,70 +689,70 @@
 
                         @if(Auth::check() && (Auth::user()->role == 'admin' || Auth::user()->role == 'supervisor'))
                             deleteButtonHtml = `
-                                    <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanForThisMeja.id}, '${penyewaanForThisMeja.meja_nama}');">
-                                        <i class="fa-solid fa-trash"></i> Hapus
-                                    </button>
-                                `;
+                                            <button type="button" class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-900 rounded-md text-xs" onclick="event.preventDefault(); confirmDeletePenyewaan(${penyewaanForThisMeja.id}, '${penyewaanForThisMeja.meja_nama}');">
+                                                <i class="fa-solid fa-trash"></i> Hapus
+                                            </button>
+                                        `;
                         @endif
 
-                        if (currentMejaStatus === 'waktu_habis') {
+                            if (currentMejaStatus === 'waktu_habis') {
                             actionButtonsHtml = `
-                                ${deleteButtonHtml}
-                                <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
-                                    <i class="fa-solid fa-wine-bottle"></i> Tambah Service
-                                </button>
-                                <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran.</span>
-                                <button type="button" class="px-3 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600" onclick="event.preventDefault(); openPaymentModal(${penyewaanForThisMeja.id});">
-                                    <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
-                                </button>
-                            `;
+                                    ${deleteButtonHtml}
+                                    <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
+                                        <i class="fa-solid fa-wine-bottle"></i> Tambah Service
+                                    </button>
+                                    <span class="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs">Waktu Habis! Menunggu Pembayaran.</span>
+                                    <button type="button" class="px-3 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600" onclick="event.preventDefault(); openPaymentModal(${penyewaanForThisMeja.id});">
+                                        <i class="fa-solid fa-cash-register"></i> Bayar Sekarang
+                                    </button>
+                                `;
                         } else { // status 'dipakai'
                             actionButtonsHtml = `
-                                ${deleteButtonHtml}
-                                <button type="button" class="px-3 py-1 bg-indigo-200 hover:bg-indigo-300 text-indigo-900 rounded-md text-xs" onclick="event.preventDefault(); openTransferMejaModal(${penyewaanForThisMeja.id});">
-                                    <i class="fa-solid fa-arrows-left-right-to-line"></i> Pindah Meja
-                                </button>
-                                <button type="button" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md text-xs" onclick="event.preventDefault(); openAddDurationModal(${penyewaanForThisMeja.id});">
-                                    <i class="fa-solid fa-stopwatch"></i> Tambah Waktu
-                                </button>
-                                <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
-                                    <i class="fa-solid fa-wine-bottle"></i> Tambah Service
-                                </button>
-                                <button type="button" class="px-3 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600" onclick="event.preventDefault(); openPaymentModal(${penyewaanForThisMeja.id});">
-                                    <i class="fa-solid fa-cash-register"></i> Bayar
-                                </button>
-                            `;
+                                    ${deleteButtonHtml}
+                                    <button type="button" class="px-3 py-1 bg-indigo-200 hover:bg-indigo-300 text-indigo-900 rounded-md text-xs" onclick="event.preventDefault(); openTransferMejaModal(${penyewaanForThisMeja.id});">
+                                        <i class="fa-solid fa-arrows-left-right-to-line"></i> Pindah Meja
+                                    </button>
+                                    <button type="button" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md text-xs" onclick="event.preventDefault(); openAddDurationModal(${penyewaanForThisMeja.id});">
+                                        <i class="fa-solid fa-stopwatch"></i> Tambah Waktu
+                                    </button>
+                                    <button type="button" class="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 rounded-md text-xs" onclick="event.preventDefault(); openAddServiceModal(${penyewaanForThisMeja.id});">
+                                        <i class="fa-solid fa-wine-bottle"></i> Tambah Service
+                                    </button>
+                                    <button type="button" class="px-3 py-1 bg-green-500 text-white rounded-md text-xs hover:bg-green-600" onclick="event.preventDefault(); openPaymentModal(${penyewaanForThisMeja.id});">
+                                        <i class="fa-solid fa-cash-register"></i> Bayar
+                                    </button>
+                                `;
                         }
 
                         let serviceDetailHtml = '';
                         if (penyewaanForThisMeja.service_detail && penyewaanForThisMeja.service_detail.length > 0) {
                             const serviceItems = penyewaanForThisMeja.service_detail.map(s => `
-                                <li class="flex justify-between items-center py-0.5 text-sm ${(s.subtotal || 0) > 0 ? 'text-gray-700' : 'text-gray-500 italic'}">
-                                    <span>${s.nama} (${s.jumlah}x) ${(s.subtotal || 0) > 0 ? `- ${fmtRp(s.subtotal)}` : ''} ${(s.subtotal || 0) === 0 && penyewaanForThisMeja.paket_id ? '(Paket)' : ''}</span>
-                                    <button type="button" class="text-red-500 hover:text-red-700 text-base" onclick="removeServiceFromPenyewaan(${penyewaanForThisMeja.id}, ${s.id}, '${s.nama}')">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </li>
-                            `).join('');
+                                    <li class="flex justify-between items-center py-0.5 text-sm ${(s.subtotal || 0) > 0 ? 'text-gray-700' : 'text-gray-500 italic'}">
+                                        <span>${s.nama} (${s.jumlah}x) ${(s.subtotal || 0) > 0 ? `- ${fmtRp(s.subtotal)}` : ''} ${(s.subtotal || 0) === 0 && penyewaanForThisMeja.paket_id ? '(Paket)' : ''}</span>
+                                        <button type="button" class="text-red-500 hover:text-red-700 text-base" onclick="removeServiceFromPenyewaan(${penyewaanForThisMeja.id}, ${s.id}, '${s.nama}')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </li>
+                                `).join('');
                             serviceDetailHtml = `
-                                <div class="cursor-pointer flex justify-between items-center py-2 border-t mt-2 font-semibold text-gray-700" onclick="toggleServiceDropdown(${penyewaanForThisMeja.id})">
-                                    <span>Layanan Terkait (${penyewaanForThisMeja.service_detail.length})</span>
-                                    <i id="service-toggle-icon-${penyewaanForThisMeja.id}" class="fa-solid fa-chevron-down"></i>
-                                </div>
-                                <ul id="service-list-${penyewaanForThisMeja.id}" class="list-disc list-inside px-2 hidden">
-                                    ${serviceItems}
-                                </ul>
-                            `;
+                                    <div class="cursor-pointer flex justify-between items-center py-2 border-t mt-2 font-semibold text-gray-700" onclick="toggleServiceDropdown(${penyewaanForThisMeja.id})">
+                                        <span>Layanan Terkait (${penyewaanForThisMeja.service_detail.length})</span>
+                                        <i id="service-toggle-icon-${penyewaanForThisMeja.id}" class="fa-solid fa-chevron-down"></i>
+                                    </div>
+                                    <ul id="service-list-${penyewaanForThisMeja.id}" class="list-disc list-inside px-2 hidden">
+                                        ${serviceItems}
+                                    </ul>
+                                `;
                         } else {
                             serviceDetailHtml = `
-                                <div class="cursor-pointer flex justify-between items-center py-2 border-t mt-2 font-semibold text-gray-700" onclick="toggleServiceDropdown(${penyewaanForThisMeja.id})">
-                                    <span>Tidak ada Layanan Terkait</span>
-                                    <i id="service-toggle-icon-${penyewaanForThisMeja.id}" class="fa-solid fa-chevron-down"></i>
-                                </div>
-                                <ul id="service-list-${penyewaanForThisMeja.id}" class="list-disc list-inside px-2 hidden">
-                                    <li class="py-0.5 text-gray-500 italic">Belum ada layanan.</li>
-                                </ul>
-                            `;
+                                    <div class="cursor-pointer flex justify-between items-center py-2 border-t mt-2 font-semibold text-gray-700" onclick="toggleServiceDropdown(${penyewaanForThisMeja.id})">
+                                        <span>Tidak ada Layanan Terkait</span>
+                                        <i id="service-toggle-icon-${penyewaanForThisMeja.id}" class="fa-solid fa-chevron-down"></i>
+                                    </div>
+                                    <ul id="service-list-${penyewaanForThisMeja.id}" class="list-disc list-inside px-2 hidden">
+                                        <li class="py-0.5 text-gray-500 italic">Belum ada layanan.</li>
+                                    </ul>
+                                `;
                         }
 
                         let memberInfoHtml = '';
@@ -767,24 +767,24 @@
 
                         if (penyewaanDivEl) {
                             penyewaanDivEl.innerHTML = `
-                                <div class="mt-3 bg-white rounded-lg shadow-sm p-3 border border-blue-300">
-                                    <div class="flex items-center justify-between">
-                                        <div>
-                                            <p class="text-sm font-semibold text-gray-700"><i class="fa-solid fa-user"></i> ${penyewaanForThisMeja.nama_penyewa}</p>
-                                            ${memberInfoHtml}
-                                            ${paketInfoHtml}
-                                            <p class="text-xs text-gray-500"><i class="fa-solid fa-clock"></i> Mulai: ${fmtTime(penyewaanForThisMeja.waktu_mulai)} WIB</p>
-                                            <p class="text-xs text-gray-500"><i class="fa-solid fa-hourglass-half"></i> Durasi: ${isSepuasnya ? 'Main Sepuasnya' : fmtDur(penyewaanForThisMeja.durasi_jam)}</p>
+                                    <div class="mt-3 bg-white rounded-lg shadow-sm p-3 border border-blue-300">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-sm font-semibold text-gray-700"><i class="fa-solid fa-user"></i> ${penyewaanForThisMeja.nama_penyewa}</p>
+                                                ${memberInfoHtml}
+                                                ${paketInfoHtml}
+                                                <p class="text-xs text-gray-500"><i class="fa-solid fa-clock"></i> Mulai: ${fmtTime(penyewaanForThisMeja.waktu_mulai)} WIB</p>
+                                                <p class="text-xs text-gray-500"><i class="fa-solid fa-hourglass-half"></i> Durasi: ${isSepuasnya ? 'Main Sepuasnya' : fmtDur(penyewaanForThisMeja.durasi_jam)}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="inline-block ${currentMejaStatus === 'waktu_habis' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'} text-xs font-semibold px-2 py-1 rounded-full">${currentMejaStatus.toUpperCase().replace('_', ' ')}</span>
+                                                <p class="text-sm font-bold text-red-700 mt-1">${timerDisplay}</p>
+                                            </div>
                                         </div>
-                                        <div class="text-right">
-                                            <span class="inline-block ${currentMejaStatus === 'waktu_habis' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'} text-xs font-semibold px-2 py-1 rounded-full">${currentMejaStatus.toUpperCase().replace('_', ' ')}</span>
-                                            <p class="text-sm font-bold text-red-700 mt-1">${timerDisplay}</p>
-                                        </div>
+                                        ${serviceDetailHtml}
+                                        <div class="mt-3 flex flex-wrap gap-2 justify-end">${actionButtonsHtml}</div>
                                     </div>
-                                    ${serviceDetailHtml}
-                                    <div class="mt-3 flex flex-wrap gap-2 justify-end">${actionButtonsHtml}</div>
-                                </div>
-                            `;
+                                `;
                             const timerEl = isSepuasnya ? getEl(`running-timer-${penyewaanForThisMeja.id}`) : getEl(`countdown-${penyewaanForThisMeja.id}`);
                             if (timerEl) {
                                 if (isSepuasnya) startRunningTimer(timerEl, penyewaanForThisMeja.waktu_mulai, penyewaanForThisMeja);
@@ -852,8 +852,13 @@
 
             // Fungsi internal untuk memuat dan memperbarui tampilan pembayaran dari backend
             const updatePaymentDisplayFromBackend = async (kuponCode = '') => {
+                // Pengecekan: Jika kupon diakhiri -kry maka tidak valid
+                const effectiveKupon = kuponCode.toLowerCase().endsWith('-kry') ? '' : kuponCode;
                 try {
-                    const url = `{{ url('/kasir/penyewaan') }}/${penyewaanId}/calculate-payment?${new URLSearchParams({ kode_kupon: kuponCode, payment_mode: paymentMode })}`;
+                    const url = `{{ url('/kasir/penyewaan') }}/${penyewaanId}/calculate-payment?${new URLSearchParams({
+                        kode_kupon: effectiveKupon,
+                        payment_mode: paymentMode
+                    })}`;
                     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
                     const data = await res.json();
 
@@ -991,8 +996,8 @@
                     const row = document.createElement('div');
                     row.className = 'flex items-center justify-between py-1 border-b last:border-b-0';
                     row.innerHTML = `<span class="font-medium text-gray-800">${s.nama} (${fmtRp(s.harga)}) <span class="text-gray-500 text-xs">(Stok: ${s.stok})</span></span>
-                                     <input type="number" data-service-id="${s.id}" data-service-price="${s.harga}" data-max-stock="${s.stok}"
-                                            class="service-qty w-20 text-center border-gray-300 rounded-md shadow-sm sm:text-sm p-1" value="0" min="0" max="${s.stok}">`;
+                                         <input type="number" data-service-id="${s.id}" data-service-price="${s.harga}" data-max-stock="${s.stok}"
+                                                class="service-qty w-20 text-center border-gray-300 rounded-md shadow-sm sm:text-sm p-1" value="0" min="0" max="${s.stok}">`;
                     serviceListContainer.appendChild(row);
                 });
 
@@ -1416,7 +1421,8 @@
         getEl('formPembayaran').addEventListener('submit', async (e) => {
             e.preventDefault();
             const pId = getEl('payment_penyewaan_id').value;
-            const kupon = getEl('kode_kupon').value; // Ambil kode kupon dari input
+            const rawKupon = getEl('kode_kupon').value; // Ambil kode kupon dari input
+            const kupon = rawKupon.toLowerCase().endsWith('-kry') ? '' : rawKupon;
             const paymentMode = getEl('payment_mode').value; // Ambil mode pembayaran dari hidden input
 
             const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -1454,7 +1460,8 @@
 
         const handleQrisPayment = async () => {
             const penyewaanId = getEl('payment_penyewaan_id').value;
-            const kuponCode = getEl('kode_kupon').value; // Ambil kode kupon dari input
+            const rawKuponCode = getEl('kode_kupon').value; // Ambil kode kupon dari input
+            const kuponCode = rawKuponCode.toLowerCase().endsWith('-kry') ? '' : rawKuponCode;
             const paymentMode = getEl('payment_mode').value; // Ambil mode pembayaran dari hidden input
 
             const qrisButton = getEl('btn-pay-qris');

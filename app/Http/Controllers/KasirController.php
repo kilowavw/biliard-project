@@ -23,7 +23,7 @@ class KasirController extends Controller
         $userRole = Auth::user() ? Auth::user()->role : 'guest';
         $activePakets = Paket::where('aktif', true)->orderBy('nama_paket')->get();
         return view('kasir.dashboard', compact('mejas', 'penyewaanAktif', 'userRole', 'activePakets'))
-                    ->with('serverTime', now()->toIso8601String());
+            ->with('serverTime', now()->toIso8601String());
     }
     public function initiatePemesanan(Request $request)
     {
@@ -48,9 +48,9 @@ class KasirController extends Controller
                 $diskonMember = 0;
                 if ($request->filled('kode_member')) {
                     $member = Member::where('kode_member', $request->kode_member)
-                                    ->where('status_keanggotaan', 'Aktif')
-                                    ->where('tanggal_kadaluarsa', '>=', now())
-                                    ->first();
+                        ->where('status_keanggotaan', 'Aktif')
+                        ->where('tanggal_kadaluarsa', '>=', now())
+                        ->first();
                     if ($member) {
                         $diskonMember = $member->diskon_persen;
                         $memberId = $member->id;
@@ -60,15 +60,15 @@ class KasirController extends Controller
                     }
                 }
                 $pemesananData = [
-                    'meja_id'         => $request->meja_id,
-                    'nama_penyewa'    => $request->nama_penyewa,
-                    'tipe_pesanan'    => $request->tipe_pesanan,
-                    'kode_member'     => $request->kode_member, // Simpan untuk konfirmasi
-                    'member_id'       => $memberId,
+                    'meja_id' => $request->meja_id,
+                    'nama_penyewa' => $request->nama_penyewa,
+                    'tipe_pesanan' => $request->tipe_pesanan,
+                    'kode_member' => $request->kode_member, // Simpan untuk konfirmasi
+                    'member_id' => $memberId,
                     'diskon_member_persen' => $diskonMember,
                 ];
                 if ($request->tipe_pesanan === 'durasi') {
-                    $pemesananData['durasi_jam'] = (float)$request->durasi_jam;
+                    $pemesananData['durasi_jam'] = (float) $request->durasi_jam;
                 } elseif ($request->tipe_pesanan === 'paket') {
                     $paket = Paket::find($request->paket_id);
                     if (!$paket || !$paket->aktif) {
@@ -101,12 +101,12 @@ class KasirController extends Controller
     {
         try {
             $request->validate([
-                'meja_id'         => 'required|exists:mejas,id',
-                'nama_penyewa'    => 'required|string|max:255',
-                'tipe_pesanan'    => 'required|in:durasi,sepuasnya,paket',
-                'durasi_jam'      => 'nullable|numeric|min:0.01',
-                'paket_id'        => 'nullable|exists:pakets,id',
-                'member_id'       => 'nullable|exists:members,id',
+                'meja_id' => 'required|exists:mejas,id',
+                'nama_penyewa' => 'required|string|max:255',
+                'tipe_pesanan' => 'required|in:durasi,sepuasnya,paket',
+                'durasi_jam' => 'nullable|numeric|min:0.01',
+                'paket_id' => 'nullable|exists:pakets,id',
+                'member_id' => 'nullable|exists:members,id',
                 'diskon_member_persen' => 'nullable|numeric',
             ]);
             $meja = Meja::find($request->meja_id);
@@ -125,7 +125,7 @@ class KasirController extends Controller
                 $totalServicePaket = 0;
                 $paketId = null;
                 if ($request->tipe_pesanan === 'durasi') {
-                    $durasiJam = (float)$request->durasi_jam;
+                    $durasiJam = (float) $request->durasi_jam;
                     $waktuSelesai = now()->addMinutes($durasiJam * 60);
                 } elseif ($request->tipe_pesanan === 'sepuasnya') {
                     $isSepuasnya = true;
@@ -139,8 +139,8 @@ class KasirController extends Controller
                     $paketId = $request->paket_id;
                     $paketDetails = $paket->isi_paket; // ini sudah array karena cast di model Paket
                     // Gunakan null coalescing operator untuk akses yang aman
-                    $durasiJam = (float)($paketDetails['durasi_jam'] ?? 0);
-                    $hargaPokokSewa = (float)($paketDetails['harga_paket'] ?? 0); // <-- Harga paket disimpan ke $hargaPokokSewa
+                    $durasiJam = (float) ($paketDetails['durasi_jam'] ?? 0);
+                    $hargaPokokSewa = (float) ($paketDetails['harga_paket'] ?? 0); // <-- Harga paket disimpan ke $hargaPokokSewa
                     $isSepuasnya = ($durasiJam === 0.0);
                     $waktuSelesai = $isSepuasnya ? null : now()->addMinutes($durasiJam * 60);
                     $servicesToDecrement = [];
@@ -149,12 +149,12 @@ class KasirController extends Controller
                         foreach ($paketDetails['services'] as $srv) {
                             if (isset($srv['id']) && isset($srv['nama']) && isset($srv['jumlah'])) {
                                 $serviceDetailPaket[] = [
-                                    'id' => (int)$srv['id'],
+                                    'id' => (int) $srv['id'],
                                     'nama' => $srv['nama'],
-                                    'jumlah' => (int)$srv['jumlah'],
+                                    'jumlah' => (int) $srv['jumlah'],
                                     'subtotal' => 0, // Subtotal service dari paket selalu 0
                                 ];
-                                $servicesToDecrement[] = ['id' => (int)$srv['id'], 'jumlah' => (int)$srv['jumlah'], 'nama' => $srv['nama']];
+                                $servicesToDecrement[] = ['id' => (int) $srv['id'], 'jumlah' => (int) $srv['jumlah'], 'nama' => $srv['nama']];
                             }
                         }
                     }
@@ -178,23 +178,23 @@ class KasirController extends Controller
                     // ServiceDetailPaket sudah menjadi array, tinggal di-encode saat disimpan
                 }
                 Penyewaan::create([
-                    'meja_id'         => $request->meja_id,
-                    'nama_penyewa'    => $request->nama_penyewa,
-                    'durasi_jam'      => $durasiJam,
-                    'harga_per_jam'   => $hargaPokokSewa, // <-- Kolom ini sekarang menyimpan harga paket atau harga per jam reguler
-                    'kode_kupon'      => null, // Kupon diterapkan saat pembayaran
-                    'diskon_persen'   => 0,    // Diskon kupon diterapkan saat pembayaran
-                    'total_service'   => $totalServicePaket,
-                    'service_detail'  => json_encode($serviceDetailPaket), // Encode array ke JSON string
-                    'total_bayar'     => null,
-                    'waktu_mulai'     => now(),
-                    'waktu_selesai'   => $waktuSelesai,
-                    'status'          => 'berlangsung',
-                    'kasir_id'        => Auth::id(),
-                    'is_sepuasnya'    => $isSepuasnya,
-                    'member_id'       => $request->member_id,
+                    'meja_id' => $request->meja_id,
+                    'nama_penyewa' => $request->nama_penyewa,
+                    'durasi_jam' => $durasiJam,
+                    'harga_per_jam' => $hargaPokokSewa, // <-- Kolom ini sekarang menyimpan harga paket atau harga per jam reguler
+                    'kode_kupon' => null, // Kupon diterapkan saat pembayaran
+                    'diskon_persen' => 0,    // Diskon kupon diterapkan saat pembayaran
+                    'total_service' => $totalServicePaket,
+                    'service_detail' => json_encode($serviceDetailPaket), // Encode array ke JSON string
+                    'total_bayar' => null,
+                    'waktu_mulai' => now(),
+                    'waktu_selesai' => $waktuSelesai,
+                    'status' => 'berlangsung',
+                    'kasir_id' => Auth::id(),
+                    'is_sepuasnya' => $isSepuasnya,
+                    'member_id' => $request->member_id,
                     'diskon_member_persen' => $request->diskon_member_persen,
-                    'paket_id'        => $paketId,
+                    'paket_id' => $paketId,
                 ]);
                 DB::commit();
                 return response()->json(['message' => 'Pemesanan berhasil dimulai.', 'success' => true], 200);
@@ -208,7 +208,7 @@ class KasirController extends Controller
             } catch (\Exception $e) {
                 DB::rollBack();
                 // Pastikan meja kembali kosong jika ada error tak terduga
-                $meja->update(['status' => 'kosong']); 
+                $meja->update(['status' => 'kosong']);
                 Log::error('Error confirm pemesanan by Kasir: ' . $e->getMessage() . ' File: ' . $e->getFile() . ' Line: . ' . $e->getLine());
                 return response()->json(['message' => 'Gagal mengkonfirmasi pemesanan. Silakan coba lagi.', 'success' => false], 500);
             }
@@ -286,19 +286,19 @@ class KasirController extends Controller
     public function getPenyewaanAktifJson()
     {
         $penyewaan = Penyewaan::with('meja', 'member', 'paket')
-        ->where('status', 'berlangsung')
-        ->get()
-        ->map(function ($item) {
+            ->where('status', 'berlangsung')
+            ->get()
+            ->map(function ($item) {
                 if (!is_null($item->waktu_selesai) && $item->waktu_selesai->isPast() && $item->meja->status === 'dipakai') {
                     $item->meja->update(['status' => 'waktu_habis']);
                     Log::info("Meja {$item->meja->nama_meja} (ID: {$item->meja->id}) otomatis diubah menjadi 'waktu_habis'.");
                 }
                 $effectiveHarga = $item->harga_per_jam;
-                $effectiveDurasi = (float)$item->durasi_jam;
+                $effectiveDurasi = (float) $item->durasi_jam;
                 $originalServiceDetails = json_decode($item->service_detail, true) ?: [];
                 return [
                     'id' => $item->id,
-                    'meja_id' => (int)$item->meja_id,
+                    'meja_id' => (int) $item->meja_id,
                     'nama_penyewa' => $item->nama_penyewa,
                     'waktu_mulai' => $item->waktu_mulai->toIso8601String(),
                     'waktu_selesai' => $item->waktu_selesai ? $item->waktu_selesai->toIso8601String() : null,
@@ -308,12 +308,12 @@ class KasirController extends Controller
                     'status_meja_saat_ini' => $item->meja->status,
                     'status' => $item->status,
                     'harga_per_jam' => $effectiveHarga,
-                    'total_service' => (float)$item->total_service,
+                    'total_service' => (float) $item->total_service,
                     'service_detail' => $originalServiceDetails,
                     'is_sepuasnya' => is_null($item->waktu_selesai), // Menggunakan is_null(waktu_selesai) sebagai indikator sepuasnya
                     'paket_id' => $item->paket_id,
                     'member_id' => $item->member_id,
-                    'diskon_member_persen' => (float)$item->diskon_member_persen,
+                    'diskon_member_persen' => (float) $item->diskon_member_persen,
                     'member_nama' => $item->member ? $item->member->nama_member : null,
                     'member_kode' => $item->member ? $item->member->kode_member : null,
                     'nama_paket' => $item->paket ? $item->paket->nama_paket : null,
@@ -332,14 +332,14 @@ class KasirController extends Controller
             if ($penyewaan->paket_id && $penyewaan->paket) {
                 $paketDetails = $penyewaan->paket->isi_paket;
                 // Menggunakan null coalescing operator untuk memastikan array key ada
-                if (isset($paketDetails['durasi_jam']) && (float)($paketDetails['durasi_jam'] ?? 1) > 0) {
-                     return response()->json(['message' => 'Tidak bisa menambah durasi untuk penyewaan paket dengan durasi tetap.', 'success' => false], 400);
+                if (isset($paketDetails['durasi_jam']) && (float) ($paketDetails['durasi_jam'] ?? 1) > 0) {
+                    return response()->json(['message' => 'Tidak bisa menambah durasi untuk penyewaan paket dengan durasi tetap.', 'success' => false], 400);
                 }
             }
             // Revisi 2 & 4 tidak berlaku untuk penambahan durasi, hanya untuk perhitungan pembayaran.
             // Durasi_jam di sini tetap akumulatif.
-            $penyewaan->durasi_jam += (float)$request->additional_durasi_jam;
-            $penyewaan->waktu_selesai = $penyewaan->waktu_selesai->addMinutes((float)$request->additional_durasi_jam * 60);
+            $penyewaan->durasi_jam += (float) $request->additional_durasi_jam;
+            $penyewaan->waktu_selesai = $penyewaan->waktu_selesai->addMinutes((float) $request->additional_durasi_jam * 60);
             $penyewaan->save();
             return response()->json(['message' => 'Durasi berhasil ditambahkan!', 'new_durasi_jam' => $penyewaan->durasi_jam, 'new_waktu_selesai' => $penyewaan->waktu_selesai->toIso8601String(), 'success' => true]);
         } catch (ValidationException $e) {
@@ -434,8 +434,8 @@ class KasirController extends Controller
                         // Hanya hapus service yang memiliki subtotal > 0 (bukan service paket gratis)
                         // REVISI: Mengembalikan semua stok, terlepas dari subtotal
                         // Ini sesuai dengan rekomendasi sebelumnya agar konsisten dengan pengurangan stok paket.
-                        $removedSubtotal += (float)($detail['subtotal'] ?? 0); // Tetap hitung subtotal yang dihapus
-                        $removedJumlah += (int)($detail['jumlah'] ?? 0);
+                        $removedSubtotal += (float) ($detail['subtotal'] ?? 0); // Tetap hitung subtotal yang dihapus
+                        $removedJumlah += (int) ($detail['jumlah'] ?? 0);
                         $serviceName = $detail['nama'];
                     } else {
                         $updatedServiceDetail[] = $detail;
@@ -447,8 +447,8 @@ class KasirController extends Controller
                         $service->increment('stok', $removedJumlah);
                     }
                 } else {
-                     DB::rollBack();
-                     return response()->json(['message' => 'Service tidak ditemukan atau tidak ada jumlah yang valid untuk dihapus.', 'success' => false], 404);
+                    DB::rollBack();
+                    return response()->json(['message' => 'Service tidak ditemukan atau tidak ada jumlah yang valid untuk dihapus.', 'success' => false], 404);
                 }
                 $penyewaan->service_detail = json_encode($updatedServiceDetail);
                 $penyewaan->total_service -= $removedSubtotal;
@@ -482,20 +482,20 @@ class KasirController extends Controller
             $tempPenyewaan = clone $penyewaan;
             // Simpan waktu selesai asli dari DB untuk penentuan tipe booking 'sepuasnya'
             $originalWaktuSelesaiDb = $penyewaan->getOriginal('waktu_selesai');
-            $originalDurasiJamDb = (float)$penyewaan->getOriginal('durasi_jam'); // Durasi jam yang dipesan awal
+            $originalDurasiJamDb = (float) $penyewaan->getOriginal('durasi_jam'); // Durasi jam yang dipesan awal
             // Waktu saat ini (aktual)
             $waktuSaatIni = now();
             $totalBayarSebelumDiskon = 0;
             $subtotalSewaUntukDisplay = 0;
             $durasiYangDigunakanUntukPerhitunganHarga = 0;
-            $hargaPerJamUntukPerhitungan = (float)$tempPenyewaan->harga_per_jam; // <-- Gunakan harga dari DB
+            $hargaPerJamUntukPerhitungan = (float) $tempPenyewaan->harga_per_jam; // <-- Gunakan harga dari DB
             // REVISI 5: Perhitungan Main Sepuasnya Menggunakan HargaSetting Terbaru
             $currentHargaSetting = HargaSetting::latest()->first();
             $hargaPerJamSaatIni = $currentHargaSetting ? $currentHargaSetting->harga_per_jam : 0;
             // Logika penentuan apakah pembulatan ke ribuan terdekat harus diterapkan
             $isSepuasnyaTypeBooking = $penyewaan->is_sepuasnya ||
-                                     ($penyewaan->paket_id && $penyewaan->paket && (float)($penyewaan->paket->isi_paket['durasi_jam'] ?? 1) === 0.0) ||
-                                     ($originalWaktuSelesaiDb === null);
+                ($penyewaan->paket_id && $penyewaan->paket && (float) ($penyewaan->paket->isi_paket['durasi_jam'] ?? 1) === 0.0) ||
+                ($originalWaktuSelesaiDb === null);
             // --- Logika Penentuan Waktu Akhir dan Durasi Perhitungan Harga berdasarkan paymentMode ---
             $waktuAkhirPerhitunganDurasi = $waktuSaatIni; // Default: waktu aktual
             if ($paymentMode === 'full_duration' && !$isSepuasnyaTypeBooking) {
@@ -521,7 +521,7 @@ class KasirController extends Controller
                 // Komentari baris di bawah ini agar harga tetap dari DB
                 // $hargaPerJamUntukPerhitungan = $hargaPerJamSaatIni;
                 $waktuAkhirPerhitunganDurasi = $waktuSaatIni; // Waktu selesai aktual tetap waktu saat ini
-            } else { 
+            } else {
                 // Ini adalah penyewaan durasi tetap, dan payment_mode adalah 'actual_duration' (atau default)
                 // Waktu selesai aktual untuk perhitungan adalah waktu saat ini, atau waktu selesai terjadwal jika sudah lewat.
                 if ($tempPenyewaan->waktu_selesai && $tempPenyewaan->waktu_selesai->lessThanOrEqualTo($waktuSaatIni)) {
@@ -544,22 +544,22 @@ class KasirController extends Controller
             // Hitung subtotal sewa
             if ($tempPenyewaan->paket_id && $tempPenyewaan->paket) {
                 // GANTI: Gunakan harga_per_jam yang disimpan sejak booking untuk paket
-                $subtotalSewaUntukDisplay = (float)$tempPenyewaan->harga_per_jam;
+                $subtotalSewaUntukDisplay = (float) $tempPenyewaan->harga_per_jam;
             } else {
                 $subtotalSewaUntukDisplay = $tempPenyewaan->durasi_jam * $hargaPerJamUntukPerhitungan;
             }
-            $totalBayarSebelumDiskon = $subtotalSewaUntukDisplay + (float)$tempPenyewaan->total_service;
-            $diskonMemberPersen = (float)$tempPenyewaan->diskon_member_persen;
+            $totalBayarSebelumDiskon = $subtotalSewaUntukDisplay + (float) $tempPenyewaan->total_service;
+            $diskonMemberPersen = (float) $tempPenyewaan->diskon_member_persen;
             $diskonPersenKupon = 0;
             $kodeKuponDigunakan = null;
             if ($request->filled('kode_kupon')) {
                 $kupon = Kupon::where('kode', $request->kode_kupon)
-                              ->where('aktif', true)
-                              ->where(function($query) {
-                                  $query->whereNull('kadaluarsa')
-                                        ->orWhere('kadaluarsa', '>=', now());
-                              })
-                              ->first();
+                    ->where('aktif', true)
+                    ->where(function ($query) {
+                        $query->whereNull('kadaluarsa')
+                            ->orWhere('kadaluarsa', '>=', now());
+                    })
+                    ->first();
                 if ($kupon) {
                     $diskonPersenKupon = $kupon->diskon_persen;
                     $kodeKuponDigunakan = $kupon->kode;
@@ -567,7 +567,7 @@ class KasirController extends Controller
             }
             $totalDiskonGabunganPersen = $diskonMemberPersen + $diskonPersenKupon;
             $finalDiskonPersen = min($totalDiskonGabunganPersen, 100);
-            $totalDiskonAmount = ($totalBayarSebelumDiskon * $finalDiskonPersen) / 100;
+            $totalDiskonAmount = round(($totalBayarSebelumDiskon * $finalDiskonPersen) / 100);
             $finalTotalBayar = $totalBayarSebelumDiskon - $totalDiskonAmount;
             if ($finalTotalBayar < 0) {
                 $finalTotalBayar = 0;
@@ -578,14 +578,14 @@ class KasirController extends Controller
             $finalTotalBayar = (int) $finalTotalBayar; // Cast ke integer untuk DECIMAL(10,0) kolom
             return response()->json([
                 'success' => true,
-                'subtotal_sewa' => (float)$subtotalSewaUntukDisplay,
-                'total_service_tambahan' => (float)$tempPenyewaan->total_service,
+                'subtotal_sewa' => (float) $subtotalSewaUntukDisplay,
+                'total_service_tambahan' => (float) $tempPenyewaan->total_service,
                 'diskon_member_persen' => $diskonMemberPersen,
                 'diskon_kupon_persen' => $diskonPersenKupon,
                 'total_diskon_amount' => $totalDiskonAmount, // Ini adalah total diskon dalam Rupiah
                 'final_total_bayar' => $finalTotalBayar, // SUDAH DIBULATKAN
                 'kode_kupon_digunakan' => $kodeKuponDigunakan,
-                'calculated_durasi_jam' => (float)$durasiYangDigunakanUntukPerhitunganHarga, // Durasi aktual yang dihitung untuk tampilan/perhitungan
+                'calculated_durasi_jam' => (float) $durasiYangDigunakanUntukPerhitunganHarga, // Durasi aktual yang dihitung untuk tampilan/perhitungan
                 'calculated_waktu_selesai' => $tempPenyewaan->waktu_selesai ? $tempPenyewaan->waktu_selesai->toIso8601String() : null, // Waktu selesai aktual yang dihitung
                 'harga_per_jam_aktual' => $hargaPerJamUntukPerhitungan, // Harga per jam yang dipakai dalam perhitungan
             ]);
@@ -605,7 +605,7 @@ class KasirController extends Controller
                 'payment_mode' => 'nullable|in:full_duration,actual_duration', // Tambahan validasi
             ]);
             if ($penyewaan->status !== 'berlangsung' && $penyewaan->status !== 'waktu_habis') {
-                 return response()->json(['message' => 'Penyewaan tidak dalam status siap dibayar.', 'success' => false], 400);
+                return response()->json(['message' => 'Penyewaan tidak dalam status siap dibayar.', 'success' => false], 400);
             }
             if ($penyewaan->meja->status === 'kosong') {
                 return response()->json(['message' => 'Meja sudah kosong dan tidak dapat diproses pembayarannya.', 'success' => false], 400);
@@ -615,21 +615,21 @@ class KasirController extends Controller
                 $paymentMode = $request->input('payment_mode', 'actual_duration'); // Ambil payment_mode dari request
                 // Simpan waktu selesai asli dari DB untuk penentuan tipe booking 'sepuasnya'
                 $originalWaktuSelesaiDb = $penyewaan->getOriginal('waktu_selesai');
-                $originalDurasiJamDb = (float)$penyewaan->getOriginal('durasi_jam'); // Durasi jam yang dipesan awal
+                $originalDurasiJamDb = (float) $penyewaan->getOriginal('durasi_jam'); // Durasi jam yang dipesan awal
                 // Waktu saat ini (aktual)
                 $waktuSaatIni = now();
                 $penyewaan->loadMissing('paket');
                 $totalBayarSebelumDiskon = 0;
                 $subtotalSewaUntukDisplay = 0;
                 $durasiYangDigunakanUntukPerhitunganHarga = 0;
-                $hargaPerJamUntukPerhitungan = (float)$penyewaan->harga_per_jam; // <-- Gunakan harga dari DB
+                $hargaPerJamUntukPerhitungan = (float) $penyewaan->harga_per_jam; // <-- Gunakan harga dari DB
                 // REVISI 5: Perhitungan Main Sepuasnya Menggunakan HargaSetting Terbaru
                 $currentHargaSetting = HargaSetting::latest()->first();
                 $hargaPerJamSaatIni = $currentHargaSetting ? $currentHargaSetting->harga_per_jam : 0;
                 // Logika penentuan apakah pembulatan ke ribuan terdekat harus diterapkan
                 $isSepuasnyaTypeBooking = $penyewaan->is_sepuasnya ||
-                                         ($penyewaan->paket_id && $penyewaan->paket && (float)($penyewaan->paket->isi_paket['durasi_jam'] ?? 1) === 0.0) ||
-                                         ($originalWaktuSelesaiDb === null);
+                    ($penyewaan->paket_id && $penyewaan->paket && (float) ($penyewaan->paket->isi_paket['durasi_jam'] ?? 1) === 0.0) ||
+                    ($originalWaktuSelesaiDb === null);
                 // --- Logika Penentuan Waktu Akhir dan Durasi Perhitungan Harga berdasarkan paymentMode ---
                 $waktuAkhirPerhitunganDurasi = $waktuSaatIni; // Default: waktu aktual
                 if ($paymentMode === 'full_duration' && !$isSepuasnyaTypeBooking) {
@@ -655,7 +655,7 @@ class KasirController extends Controller
                     // Komentari baris di bawah ini agar harga tetap dari DB
                     // $hargaPerJamUntukPerhitungan = $hargaPerJamSaatIni;
                     $waktuAkhirPerhitunganDurasi = $waktuSaatIni; // Waktu selesai aktual tetap waktu saat ini
-                } else { 
+                } else {
                     // Ini adalah penyewaan durasi tetap, dan payment_mode adalah 'actual_duration' (atau default)
                     // Waktu selesai aktual untuk perhitungan adalah waktu saat ini, atau waktu selesai terjadwal jika sudah lewat.
                     if ($penyewaan->waktu_selesai && $penyewaan->waktu_selesai->lessThanOrEqualTo($waktuSaatIni)) {
@@ -683,22 +683,22 @@ class KasirController extends Controller
                 // Hitung subtotal sewa
                 if ($penyewaan->paket_id && $penyewaan->paket) {
                     // GANTI: Gunakan harga_per_jam yang disimpan sejak booking untuk paket
-                    $subtotalSewaUntukDisplay = (float)$penyewaan->harga_per_jam;
+                    $subtotalSewaUntukDisplay = (float) $penyewaan->harga_per_jam;
                 } else {
                     $subtotalSewaUntukDisplay = $penyewaan->durasi_jam * $hargaPerJamUntukPerhitungan;
                 }
-                $totalBayarSebelumDiskon = $subtotalSewaUntukDisplay + (float)$penyewaan->total_service;
-                $diskonMemberPersen = (float)$penyewaan->diskon_member_persen;
+                $totalBayarSebelumDiskon = $subtotalSewaUntukDisplay + (float) $penyewaan->total_service;
+                $diskonMemberPersen = (float) $penyewaan->diskon_member_persen;
                 $diskonPersenKupon = 0;
                 $kodeKuponDigunakan = null;
                 if ($request->filled('kode_kupon')) {
                     $kupon = Kupon::where('kode', $request->kode_kupon)
-                                  ->where('aktif', true)
-                                  ->where(function($query) {
-                                      $query->whereNull('kadaluarsa')
-                                            ->orWhere('kadaluarsa', '>=', now());
-                                  })
-                                  ->first();
+                        ->where('aktif', true)
+                        ->where(function ($query) {
+                            $query->whereNull('kadaluarsa')
+                                ->orWhere('kadaluarsa', '>=', now());
+                        })
+                        ->first();
                     if ($kupon) {
                         $diskonPersenKupon = $kupon->diskon_persen;
                         $kodeKuponDigunakan = $kupon->kode;
@@ -706,7 +706,7 @@ class KasirController extends Controller
                 }
                 $totalDiskonGabunganPersen = $diskonMemberPersen + $diskonPersenKupon;
                 $finalDiskonPersen = min($totalDiskonGabunganPersen, 100);
-                $totalDiskonAmount = ($totalBayarSebelumDiskon * $finalDiskonPersen) / 100;
+                $totalDiskonAmount = round(($totalBayarSebelumDiskon * $finalDiskonPersen) / 100);
                 $finalTotalBayar = $totalBayarSebelumDiskon - $totalDiskonAmount;
                 if ($finalTotalBayar < 0) {
                     $finalTotalBayar = 0;
@@ -717,12 +717,12 @@ class KasirController extends Controller
                 $finalTotalBayar = (int) $finalTotalBayar; // Cast ke integer untuk DECIMAL(10,0) kolom
                 $isQrisPayment = $request->boolean('is_qris', false);
                 $penyewaan->update([
-                    'kasir_id'      => Auth::id(),
-                    'kode_kupon'    => $kodeKuponDigunakan,
+                    'kasir_id' => Auth::id(),
+                    'kode_kupon' => $kodeKuponDigunakan,
                     'diskon_persen' => $diskonPersenKupon,
-                    'total_bayar'   => $finalTotalBayar, // Nilai ini sudah dibulatkan ke ribuan dan menjadi integer
-                    'status'        => 'dibayar',
-                    'is_qris'       => $isQrisPayment,
+                    'total_bayar' => $finalTotalBayar, // Nilai ini sudah dibulatkan ke ribuan dan menjadi integer
+                    'status' => 'dibayar',
+                    'is_qris' => $isQrisPayment,
                 ]);
                 $penyewaan->meja->update(['status' => 'kosong']);
                 DB::commit();
@@ -750,7 +750,7 @@ class KasirController extends Controller
                     'message' => 'Akses ditolak. Penghapusan meja hanya bisa dilakukan oleh Admin atau Supervisor.',
                     'success' => false
                 ], 403);
-            }        
+            }
             if ($penyewaan->status !== 'berlangsung' && $penyewaan->status !== 'waktu_habis') {
                 return response()->json(['message' => 'Penyewaan tidak dalam status aktif atau waktu habis sehingga tidak dapat dihapus.', 'success' => false], 400);
             }
@@ -766,7 +766,7 @@ class KasirController extends Controller
                         // Ini akan menangani service paket (subtotal 0) maupun service tambahan (subtotal > 0)
                         $service = Service::lockForUpdate()->find($srv['id']);
                         if ($service) {
-                            $service->increment('stok', (int)$srv['jumlah']);
+                            $service->increment('stok', (int) $srv['jumlah']);
                         }
                     }
                 }
@@ -790,9 +790,9 @@ class KasirController extends Controller
             'kode_member' => 'required|string|max:255',
         ]);
         $member = Member::where('kode_member', $request->kode_member)
-                        ->where('status_keanggotaan', 'Aktif')
-                        ->where('tanggal_kadaluarsa', '>=', now())
-                        ->first();
+            ->where('status_keanggotaan', 'Aktif')
+            ->where('tanggal_kadaluarsa', '>=', now())
+            ->first();
         if ($member) {
             return response()->json([
                 'valid' => true,

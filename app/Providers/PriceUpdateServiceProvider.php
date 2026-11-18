@@ -4,6 +4,7 @@ namespace App\Providers;
 use App\Models\HargaSetting; // Asumsikan model Anda bernama HargaSetting
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
 class PriceUpdateServiceProvider extends ServiceProvider
@@ -21,6 +22,12 @@ class PriceUpdateServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Console commands such as package discovery and migrations must be able
+        // to run before a database connection or the table exists.
+        if ($this->app->runningInConsole() || ! Schema::hasTable('harga_settings')) {
+            return;
+        }
+
         // Panggil fungsi pembaruan harga saat aplikasi di-boot
         $this->ensureActivePriceIsUpdatedOnBoot();
     }

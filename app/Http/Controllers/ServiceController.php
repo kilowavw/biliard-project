@@ -4,8 +4,6 @@
 
 namespace App\Http\Controllers;
 
-namespace App\Http\Controllers;
-
 use App\Models\Service;
 use App\Models\Kupon; // Import Kupon
 use App\Models\ServiceTransaction; // Import ServiceTransaction
@@ -73,7 +71,7 @@ class ServiceController extends Controller
         try {
             $request->validate([
                 'nama' => ['required', 'string', 'max:255', Rule::unique('services')->ignore($service->id)],
-                'kategori' => ['required', Rule::in(['alat', 'makanan', 'minuman','rokok'])],
+                'kategori' => ['required', Rule::in(['alat', 'makanan', 'minuman', 'rokok'])],
                 'harga' => 'required|numeric|min:0',
                 'stok' => 'required|integer|min:0',
             ], [
@@ -127,20 +125,20 @@ class ServiceController extends Controller
         $services = Service::select('id', 'nama', 'harga', 'stok', 'kategori')->orderBy('nama')->get();
         return response()->json($services);
     }
-    
-  /**
+
+    /**
      * NEW: Display the form for direct service ordering by Kasir.
      */
-       public function kasirServiceOrderIndex()
+    public function kasirServiceOrderIndex()
     {
         // For the order modal, we just need active services with stock > 0.
         // We will fetch all services via API in JS to get the current stock.
-        
+
         // For history, fetch latest transactions by the current kasir
         $serviceTransactions = ServiceTransaction::where('kasir_id', Auth::id())
-                                                ->orderBy('transaction_time', 'desc')
-                                                ->paginate(10); // Histori transaksi
-        
+            ->orderBy('transaction_time', 'desc')
+            ->paginate(10); // Histori transaksi
+
         // Pass server time for JS calibration (similar to kasir dashboard)
         $serverTime = now()->toIso8601String();
 
@@ -191,11 +189,11 @@ class ServiceController extends Controller
                 $totalServiceCost += $subtotal;
 
                 $orderedServiceDetails[] = [
-                    'id' => (int)$service->id,
+                    'id' => (int) $service->id,
                     'nama' => $service->nama,
-                    'jumlah' => (int)$serviceItem['jumlah'],
-                    'harga_satuan' => (float)$service->harga,
-                    'subtotal' => (float)$subtotal,
+                    'jumlah' => (int) $serviceItem['jumlah'],
+                    'harga_satuan' => (float) $service->harga,
+                    'subtotal' => (float) $subtotal,
                 ];
 
                 $service->decrement('stok', $serviceItem['jumlah']);
@@ -208,15 +206,15 @@ class ServiceController extends Controller
             if ($request->filled('kode_kupon')) {
                 // Fetch coupon details directly or re-use existing KuponController logic carefully
                 $kupon = Kupon::where('kode', $request->kode_kupon)
-                                ->where('aktif', true)
-                                ->where(function($query) {
-                                    $query->whereNull('kadaluarsa')
-                                        ->orWhere('kadaluarsa', '>=', now());
-                                })
-                                ->first();
+                    ->where('aktif', true)
+                    ->where(function ($query) {
+                        $query->whereNull('kadaluarsa')
+                            ->orWhere('kadaluarsa', '>=', now());
+                    })
+                    ->first();
 
                 if ($kupon) {
-                    $diskonPersen = (float)$kupon->diskon_persen;
+                    $diskonPersen = (float) $kupon->diskon_persen;
                     $kodeKuponDigunakan = $request->kode_kupon;
                 } else {
                     DB::rollBack();
@@ -225,7 +223,7 @@ class ServiceController extends Controller
             }
 
             $totalBeforeDiscount = $totalServiceCost;
-            $diskonAmount = ($totalBeforeDiscount * $diskonPersen) / 100;
+            $diskonAmount = round(($totalBeforeDiscount * $diskonPersen) / 100);
             $totalBayarAkhir = $totalBeforeDiscount - $diskonAmount;
 
             $paymentStatus = 'paid';
@@ -251,7 +249,7 @@ class ServiceController extends Controller
 
             $successMessage = "Pemesanan service sukses!";
             if ($serviceTransaction->payment_status === 'pending') {
-                $successMessage .= " Transaksi #${serviceTransaction->id} disimpan dengan status menunggu pembayaran.";
+                $successMessage .= " Transaksi #{$serviceTransaction->id} disimpan dengan status menunggu pembayaran.";
             } else {
                 $successMessage .= " Total bayar: " . number_format($serviceTransaction->total_bayar, 0, ',', '.');
             }
@@ -259,8 +257,8 @@ class ServiceController extends Controller
             // Return a more robust JSON response. Ensure all values are scalar.
             return response()->json([
                 'message' => $successMessage,
-                'transaction_id' => (int)$serviceTransaction->id,
-                'total_bayar' => (float)$serviceTransaction->total_bayar,
+                'transaction_id' => (int) $serviceTransaction->id,
+                'total_bayar' => (float) $serviceTransaction->total_bayar,
                 'payment_status' => $paymentStatus
             ], 200);
 
@@ -281,7 +279,7 @@ class ServiceController extends Controller
         //      return response()->json(['message' => 'Anda tidak berwenang melakukan tindakan ini.'], 403);
         // }
         if ($transaction->payment_status !== 'pending') {
-             return response()->json(['message' => 'Status transaksi ini tidak bisa diubah.'], 400);
+            return response()->json(['message' => 'Status transaksi ini tidak bisa diubah.'], 400);
         }
 
         $request->validate([
