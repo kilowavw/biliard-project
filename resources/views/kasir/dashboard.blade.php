@@ -247,7 +247,7 @@
                         class="text-xs text-gray-500 italic" style="display: none;">(Harga saat ini: <strong
                             id="payment_harga_per_jam_aktual"></strong>)</span></p>
                 <p class="mb-1">Subtotal Sewa: <strong id="payment_subtotal_main"></strong></p>
-                <p class="mb-1">Total Service Tambahan: <strong id="payment_total_service"></strong></p>
+                <p class="mb-1">Service yang Dipesan: <strong id="payment_total_service"></strong></p>
                 <ul id="payment_service_detail" class="list-disc list-inside text-sm text-gray-600 mb-2 pl-5"></ul>
 
                 <div class="mb-3 mt-4">
@@ -915,35 +915,20 @@
 
                     getEl('payment_subtotal_main').innerText = fmtRp(data.subtotal_sewa);
 
-                    // --- START MODIFIKASI UNTUK SERVICE CHARGE 5% ---
-                    const SERVICE_CHARGE_PERCENT = 5;
-                    const serviceChargeAmount = (data.subtotal_sewa * SERVICE_CHARGE_PERCENT) / 100;
-                    const totalServicePlusCharge = data.total_service_tambahan + serviceChargeAmount;
-
-                    // Hitung total sebelum diskon (termasuk Service Charge 5% dari sewa)
-                    const totalSebelumDiskonSemua = data.subtotal_sewa + data.total_service_tambahan + serviceChargeAmount;
-
-                    getEl('payment_total_service').innerText = fmtRp(totalServicePlusCharge);
+                    const totalSebelumDiskonSemua = data.subtotal_sewa + data.total_service_tambahan;
+                    getEl('payment_total_service').innerText = fmtRp(data.total_service_tambahan);
 
                     // Hitung jumlah diskon dalam Rupiah untuk tampilan
                     const diskonMemberAmountTampilan = (totalSebelumDiskonSemua * data.diskon_member_persen) / 100;
                     const diskonKuponAmountTampilan = (totalSebelumDiskonSemua * data.diskon_kupon_persen) / 100;
 
                     const totalDiskonSemua = diskonMemberAmountTampilan + diskonKuponAmountTampilan;
-                    const totalFinalBayarDiFrontend = totalSebelumDiskonSemua - totalDiskonSemua;
-
                     getEl('payment_diskon_member').innerText = `${fmtRp(diskonMemberAmountTampilan)} (${data.diskon_member_persen}%)`;
                     getEl('payment_diskon_kupon').innerText = `${fmtRp(diskonKuponAmountTampilan)} (${data.diskon_kupon_persen}%)`;
-                    getEl('payment_total_final').innerText = fmtRp(totalFinalBayarDiFrontend);
+                    getEl('payment_total_final').innerText = fmtRp(data.final_total_bayar);
 
                     const serviceDetailListEl = getEl('payment_service_detail');
                     serviceDetailListEl.innerHTML = '';
-
-                    if (serviceChargeAmount > 0) {
-                        const li = document.createElement('li');
-                        li.innerText = `Biaya Service (${SERVICE_CHARGE_PERCENT}%) - ${fmtRp(serviceChargeAmount)}`;
-                        serviceDetailListEl.appendChild(li);
-                    }
 
                     if (serviceDetailsUntukModalBayar && serviceDetailsUntukModalBayar.length > 0) {
                         serviceDetailsUntukModalBayar.forEach(s => {
@@ -951,12 +936,11 @@
                             li.innerText = `${s.nama} (${s.jumlah}x) - ${fmtRp(s.subtotal)}`;
                             serviceDetailListEl.appendChild(li);
                         });
-                    } else if (serviceChargeAmount === 0) {
+                    } else {
                         const li = document.createElement('li');
                         li.innerText = 'Tidak ada layanan tambahan.';
                         serviceDetailListEl.appendChild(li);
                     }
-                    // --- END MODIFIKASI UNTUK SERVICE CHARGE 5% ---
 
                 } catch (error) {
                     Swal.fire('Error', 'Gagal memuat detail pembayaran: ' + error.message, 'error');

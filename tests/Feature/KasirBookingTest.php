@@ -139,6 +139,127 @@ class KasirBookingTest extends TestCase
             ->assertRedirect(route('dashboard.kasir'));
     }
 
+    public function test_payment_calculation_excludes_the_unconfigured_five_percent_service_fee(): void
+    {
+        $this->signInKasir();
+        $meja = $this->meja();
+        $meja->update(['status' => 'dipakai']);
+        $penyewaan = Penyewaan::create([
+            'meja_id' => $meja->id,
+            'nama_penyewa' => 'Test Guest',
+            'durasi_jam' => 1,
+            'harga_per_jam' => 30000,
+            'total_service' => 1500,
+            'service_detail' => [['nama' => 'Soda', 'jumlah' => 1, 'subtotal' => 1500]],
+            'diskon_member_persen' => 10,
+            'waktu_mulai' => now()->subHour(),
+            'waktu_selesai' => now()->addHour(),
+            'status' => 'berlangsung',
+        ]);
+
+        $this->getJson(route('kasir.api.calculatePaymentDetails', $penyewaan))
+            ->assertOk()
+            ->assertJsonPath('subtotal_sewa', 30000)
+            ->assertJsonPath('total_service_tambahan', 1500)
+            ->assertJsonPath('final_total_bayar', 28000);
+
+        $this->get(route('dashboard.kasir'))
+            ->assertOk()
+            ->assertSee('Service yang Dipesan')
+            ->assertDontSee('Biaya Service (5%)');
+    }
+
+    public function test_qris_payment_saves_server_calculated_total_and_releases_table(): void
+    {
+        $this->signInKasir();
+        $this->travelTo(now()->startOfSecond());
+        $fixedNow = now();
+        $meja = $this->meja();
+        $meja->update(['status' => 'dipakai']);
+        $penyewaan = Penyewaan::create([
+            'meja_id' => $meja->id,
+            'nama_penyewa' => 'Test Guest',
+            'durasi_jam' => 1,
+            'harga_per_jam' => 30000,
+            'total_service' => 1500,
+            'service_detail' => [['nama' => 'Soda', 'jumlah' => 1, 'subtotal' => 1500]],
+            'diskon_member_persen' => 10,
+            'waktu_mulai' => $fixedNow->copy()->subHour(),
+            'waktu_selesai' => $fixedNow->copy()->addHour(),
+            'status' => 'berlangsung',
+        ]);
+
+        $this->postJson(route('kasir.processPayment', $penyewaan), [
+            'is_qris' => true,
+            'payment_mode' => 'actual_duration',
+        ])->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('total_bayar', 28000);
+
+        $this->assertSame('dibayar', $penyewaan->fresh()->status);
+        $this->assertTrue($penyewaan->fresh()->is_qris);
+        $this->assertSame(28000, $penyewaan->fresh()->total_bayar);
+        $this->assertSame('kosong', $meja->fresh()->status);
+    }
+
+    public function test_active_rental_service_and_duration_actions_work(): void
+    {
+        $this->signInKasir();
+        $meja = $this->meja();
+        $meja->update(['status' => 'dipakai']);
+        $penyewaan = Penyewaan::create([
+            'meja_id' => $meja->id,
+            'nama_penyewa' => 'Test Guest',
+            'durasi_jam' => 1,
+            'harga_per_jam' => 30000,
+            'waktu_mulai' => now(),
+            'waktu_selesai' => now()->addHour(),
+            'status' => 'berlangsung',
+        ]);
+        $service = Service::create(['nama' => 'Soda', 'harga' => 5000, 'stok' => 3]);
+
+        $this->getJson(route('kasir.api.penyewaanAktif'))
+            ->assertOk()
+            ->assertJsonPath('0.id', $penyewaan->id)
+            ->assertJsonPath('0.service_detail', []);
+        $this->postJson(route('kasir.addService', $penyewaan), [
+            'services' => [['service_id' => $service->id, 'jumlah' => 1]],
+        ])->assertOk()->assertJsonPath('success', true);
+        $this->assertSame(2, $service->fresh()->stok);
+        $this->assertSame(5000, $penyewaan->fresh()->total_service);
+
+        $this->deleteJson(route('kasir.removeService', $penyewaan), ['service_id' => $service->id])
+            ->assertOk()->assertJsonPath('success', true);
+        $this->assertSame(3, $service->fresh()->stok);
+        $this->assertSame(0, $penyewaan->fresh()->total_service);
+
+        $this->postJson(route('kasir.addDuration', $penyewaan), ['additional_durasi_jam' => 1.5])
+            ->assertOk()->assertJsonPath('success', true)->assertJsonPath('new_durasi_jam', 2.5);
+    }
+
+    public function test_transfer_meja_moves_the_active_rental(): void
+    {
+        $this->signInKasir();
+        $mejaAsal = $this->meja();
+        $mejaTujuan = Meja::create(['nama_meja' => 'Destination Table', 'status' => 'kosong']);
+        $mejaAsal->update(['status' => 'dipakai']);
+        $penyewaan = Penyewaan::create([
+            'meja_id' => $mejaAsal->id,
+            'nama_penyewa' => 'Test Guest',
+            'durasi_jam' => 1,
+            'harga_per_jam' => 30000,
+            'waktu_mulai' => now(),
+            'waktu_selesai' => now()->addHour(),
+            'status' => 'berlangsung',
+        ]);
+
+        $this->postJson(route('kasir.transferMeja', $penyewaan), ['meja_baru_id' => $mejaTujuan->id])
+            ->assertOk()->assertJsonPath('success', true);
+        $this->assertSame('kosong', $mejaAsal->fresh()->status);
+        $this->assertSame('dipakai', $mejaTujuan->fresh()->status);
+        $this->assertSame($mejaTujuan->id, $penyewaan->fresh()->meja_id);
+    }
+
     public function test_kasir_booking_urls_are_same_origin_paths(): void
     {
         $this->signInKasir();

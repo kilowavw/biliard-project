@@ -293,7 +293,9 @@ class PemanduController extends Controller
                     'status' => $item->status,
                     'harga_per_jam' => (float)$item->harga_per_jam,
                     'total_service' => (float)$item->total_service,
-                    'service_detail' => json_decode($item->service_detail, true),
+                    'service_detail' => is_array($item->service_detail)
+                        ? $item->service_detail
+                        : (json_decode($item->service_detail ?? '[]', true) ?: []),
                     'is_sepuasnya' => is_null($item->waktu_selesai),
                     'paket_id' => $item->paket_id,
                     'pemandu_nama' => $item->pemandu ? $item->pemandu->name : 'N/A',
@@ -344,7 +346,9 @@ class PemanduController extends Controller
 
             DB::beginTransaction();
             try {
-                $existingServiceDetail = json_decode($penyewaan->service_detail, true) ?: [];
+                $existingServiceDetail = is_array($penyewaan->service_detail)
+                    ? $penyewaan->service_detail
+                    : (json_decode($penyewaan->service_detail ?? '[]', true) ?: []);
                 $totalServiceTambahan = 0;
 
                 foreach ($request->services as $serviceItem) {
@@ -416,7 +420,9 @@ class PemanduController extends Controller
 
             DB::beginTransaction();
             try {
-                $existingServiceDetail = json_decode($penyewaan->service_detail, true) ?: [];
+                $existingServiceDetail = is_array($penyewaan->service_detail)
+                    ? $penyewaan->service_detail
+                    : (json_decode($penyewaan->service_detail ?? '[]', true) ?: []);
                 $serviceToRemoveId = $request->service_id;
                 $removedSubtotal = 0;
                 $removedJumlah = 0;

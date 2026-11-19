@@ -333,7 +333,9 @@ class KasirController extends Controller
                 }
                 $effectiveHarga = $item->harga_per_jam;
                 $effectiveDurasi = (float) $item->durasi_jam;
-                $originalServiceDetails = json_decode($item->service_detail, true) ?: [];
+                $originalServiceDetails = is_array($item->service_detail)
+                    ? $item->service_detail
+                    : (json_decode($item->service_detail ?? '[]', true) ?: []);
                 return [
                     'id' => $item->id,
                     'meja_id' => (int) $item->meja_id,
@@ -400,7 +402,9 @@ class KasirController extends Controller
             }
             DB::beginTransaction();
             try {
-                $existingServiceDetail = json_decode($penyewaan->service_detail, true) ?: [];
+                $existingServiceDetail = is_array($penyewaan->service_detail)
+                    ? $penyewaan->service_detail
+                    : (json_decode($penyewaan->service_detail ?? '[]', true) ?: []);
                 $totalServiceTambahanSaatIni = 0;
                 foreach ($request->services as $serviceItem) {
                     $service = Service::lockForUpdate()->find($serviceItem['service_id']);
@@ -461,7 +465,9 @@ class KasirController extends Controller
             }
             DB::beginTransaction();
             try {
-                $existingServiceDetail = json_decode($penyewaan->service_detail, true) ?: [];
+                $existingServiceDetail = is_array($penyewaan->service_detail)
+                    ? $penyewaan->service_detail
+                    : (json_decode($penyewaan->service_detail ?? '[]', true) ?: []);
                 $serviceToRemoveId = $request->service_id;
                 $removedSubtotal = 0;
                 $removedJumlah = 0;
@@ -648,7 +654,6 @@ class KasirController extends Controller
             if ($penyewaan->meja->status === 'kosong') {
                 return response()->json(['message' => 'Meja sudah kosong dan tidak dapat diproses pembayarannya.', 'success' => false], 400);
             }
-            DB::beginTransaction();
             try {
                 $paymentMode = $request->input('payment_mode', 'actual_duration'); // Ambil payment_mode dari request
                 // Simpan waktu selesai asli dari DB untuk penentuan tipe booking 'sepuasnya'
@@ -763,19 +768,16 @@ class KasirController extends Controller
                     'is_qris' => $isQrisPayment,
                 ]);
                 $penyewaan->meja->update(['status' => 'kosong']);
-                DB::commit();
                 return response()->json(['message' => 'Pembayaran sukses!', 'total_bayar' => $finalTotalBayar, 'success' => true]);
             } catch (ValidationException $e) {
-                DB::rollBack();
                 return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
-            } catch (\Exception $e) {
-                DB::rollBack();
+            } catch (\Throwable $e) {
                 Log::error('Error processing payment: ' . $e->getMessage() . ' File: ' . $e->getFile() . ' Line: ' . $e->getLine());
                 return response()->json(['message' => 'Gagal memproses pembayaran. Silakan coba lagi.', 'success' => false], 500);
             }
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error processing payment (outer catch): ' . $e->getMessage() . ' File: ' . $e->getFile() . ' Line: ' . $e->getLine());
             return response()->json(['message' => 'Gagal memproses pembayaran. Silakan coba lagi.', 'success' => false], 500);
         }
@@ -797,7 +799,9 @@ class KasirController extends Controller
             }
             DB::beginTransaction();
             try {
-                $serviceDetails = json_decode($penyewaan->service_detail, true) ?: [];
+                $serviceDetails = is_array($penyewaan->service_detail)
+                    ? $penyewaan->service_detail
+                    : (json_decode($penyewaan->service_detail ?? '[]', true) ?: []);
                 foreach ($serviceDetails as $srv) {
                     if (isset($srv['id']) && isset($srv['jumlah'])) {
                         // Mengembalikan semua stok service yang terpakai, terlepas dari subtotal
