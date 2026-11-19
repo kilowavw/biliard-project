@@ -15,6 +15,7 @@ class Penyewaan extends Model
         'total_bayar', 'waktu_mulai', 'waktu_selesai', 'status', 'kasir_id',
         'paket_id', 'pemandu_id', 'is_qris','member_id',         
         'diskon_member_persen',
+        'reservation_token',
     ];
 
     protected $casts = [

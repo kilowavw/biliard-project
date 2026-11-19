@@ -76,7 +76,7 @@
 
                 <div id="non_paket_options" class="space-y-3">
                     <div class="flex items-center">
-                        <input type="checkbox" id="is_sepuasnya" name="is_sepuasnya_form_input"
+                        <input type="checkbox" id="is_sepuasnya" name="is_sepuasnya"
                             class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                         <label for="is_sepuasnya" class="ml-2 block text-sm text-gray-900">Main Sepuasnya</label>
                     </div>
@@ -1241,6 +1241,8 @@
                 } else {
                     tipePesanan = 'durasi';
                 }
+                if (tipePesanan === 'paket') formData.set('paket_id', paketId);
+                if (tipePesanan === 'durasi') formData.set('durasi_jam', getEl('durasi_jam').value);
                 formData.append('tipe_pesanan', tipePesanan);
 
                 const res = await fetch(form.action, { // form.action sudah disetel ke initiatePemesanan
@@ -1250,7 +1252,7 @@
                 });
                 const data = await res.json();
 
-                if (data.success) {
+            if (res.ok && data.success) {
                     // Swal.fire('Berhasil!', data.message, 'success'); // Tidak perlu Swal di sini, langsung ke konfirmasi
                     closeModal(); // Tutup modal pemesanan
                     fetchAndRenderMejas(); // Perbarui status meja menjadi 'dipakai'
@@ -1296,7 +1298,7 @@
                 });
                 const data = await res.json();
 
-                if (data.success) {
+                if (res.ok && data.success) {
                     Swal.fire('Berhasil!', data.message, 'success');
                     closeConfirmPemesananModal();
                     fetchAndRenderMejas(); // Perbarui dashboard untuk menampilkan penyewaan aktif
@@ -1308,17 +1310,15 @@
                     }
                     Swal.fire('Gagal!', errorMessage, 'error');
                     // Jika konfirmasi gagal, reset meja
-                    await resetMejaStatus(tempPemesananData.meja_id);
                 }
             } catch (error) {
                 console.error('Error confirming pemesanan:', error);
                 Swal.fire('Error!', 'Terjadi kesalahan jaringan atau server saat mengkonfirmasi pemesanan.', 'error');
-                await resetMejaStatus(tempPemesananData.meja_id);
             } finally {
                 confirmBtn.disabled = false;
                 cancelBtn.disabled = false;
                 confirmBtn.innerHTML = 'Ya, Mulai Billing';
-                tempPemesananData = null; // Reset data sementara
+                if (getEl('confirmPesanModal').style.display === 'none') tempPemesananData = null;
             }
         });
 
@@ -1337,7 +1337,7 @@
             cancelBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mereset...';
 
             try {
-                await resetMejaStatus(mejaIdToReset);
+                await resetMejaStatus(mejaIdToReset, tempPemesananData.reservation_token);
                 Swal.fire('Dibatalkan!', 'Pemesanan dibatalkan dan meja direset.', 'info');
                 closeConfirmPemesananModal();
                 fetchAndRenderMejas(); // Perbarui dashboard
@@ -1353,11 +1353,12 @@
         });
 
         // BARU: Fungsi untuk mereset status meja via API
-        const resetMejaStatus = async (mejaId) => {
+        const resetMejaStatus = async (mejaId, reservationToken) => {
             try {
                 const res = await fetch(`{{ url('/kasir/meja') }}/${mejaId}/reset-status`, {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reservation_token: reservationToken }),
                 });
                 const data = await res.json();
                 if (!data.success) {

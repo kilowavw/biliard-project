@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.4.0/css/all.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -80,7 +80,7 @@
         <!-- Logo + Close -->
         <div class="flex justify-between items-center px-2 py-4">
             <div class="text-white text-2xl font-bold tracking-wide">
-                <i class="fa-solid fa-pool-8-ball mr-2"></i> Billiard-APP
+                <i class="fa-solid fa-circle mr-2"></i> Billiard-APP
             </div>
             <!-- Close SELALU ada (mobile + tablet) -->
             <button type="button" data-drawer-hide="drawer-sidebar" aria-controls="drawer-sidebar"
@@ -135,7 +135,7 @@
             
                 <a href="{{ route('members.index') }}" class="flex items-center px-4 py-2 rounded
                     {{ request()->routeIs('members.*') ? 'text-white bg-[#282828]' : 'hover:bg-[#282828]' }}">
-                    <i class="fa-solid fa-user-group-crown w-5 text-center mr-3"></i> Members
+                    <i class="fa-solid fa-users w-5 text-center mr-3"></i> Members
                 </a>
             
                 <a href="{{ route('admin.services.index') }}" class="flex items-center px-4 py-2 rounded

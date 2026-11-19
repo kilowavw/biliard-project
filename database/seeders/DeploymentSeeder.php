@@ -32,7 +32,7 @@ class DeploymentSeeder extends Seeder
         foreach (range(1, 21) as $number) {
             DB::table('mejas')->updateOrInsert(
                 ['nama_meja' => "Meja {$number}"],
-                ['status' => 'kosong', 'created_at' => now(), 'updated_at' => now()]
+                ['created_at' => now(), 'updated_at' => now()]
             );
         }
 

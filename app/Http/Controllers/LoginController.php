@@ -29,7 +29,7 @@ class LoginController extends Controller
             $role = Auth::user()->role;
     
             return match ($role) {
-                'admin' => redirect()->route('dashboard.admin'),
+                'admin' => redirect()->route('dashboard.kasir'),
                 'bos' => redirect()->route('dashboard.bos'),
                 'pemandu' => redirect()->route('dashboard.pemandu'),
                 'supervisor' => redirect()->route('dashboard.supervisor'),
