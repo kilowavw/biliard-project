@@ -275,7 +275,7 @@
 
         async function sendPriceUpdateRequest(priceType) {
             try {
-                const response = await fetch("{{ route('api.update_dynamic_price') }}", {
+                const response = await fetch("{{ route('api.update_dynamic_price', [], false) }}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

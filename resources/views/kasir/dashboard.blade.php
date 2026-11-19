@@ -395,7 +395,7 @@
             getEl('durasi_jam').disabled = false; // Pastikan aktif
 
             // Form action diubah agar selalu ke initiatePemesanan
-            getEl('formPesan').action = '{{ route('kasir.initiatePemesanan') }}';
+            getEl('formPesan').action = '{{ route('kasir.initiatePemesanan', [], false) }}';
 
             populatePaketsDropdown(false);
             toggleModal('pesanModal', true);
@@ -637,7 +637,7 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
-                        const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${penyewaanId}/remove-service`, {
+                        const res = await fetch(`/kasir/penyewaan/${penyewaanId}/remove-service`, {
                             method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ service_id: serviceId })
                         });
                         const data = await res.json();
@@ -650,7 +650,7 @@
 
         const fetchAndRenderMejas = async () => {
             try {
-                const res = await fetch('{{ route('kasir.api.penyewaanAktif') }}');
+                const res = await fetch('{{ route('kasir.api.penyewaanAktif', [], false) }}');
                 const activeRentals = await res.json();
                 currentActiveRentals = {}; activeRentals.forEach(p => currentActiveRentals[p.id] = p);
 
@@ -855,7 +855,7 @@
                 // Pengecekan: Jika kupon diakhiri -kry maka tidak valid
                 const effectiveKupon = kuponCode.toLowerCase().endsWith('-kry') ? '' : kuponCode;
                 try {
-                    const url = `{{ url('/kasir/penyewaan') }}/${penyewaanId}/calculate-payment?${new URLSearchParams({
+                    const url = `/kasir/penyewaan/${penyewaanId}/calculate-payment?${new URLSearchParams({
                         kode_kupon: effectiveKupon,
                         payment_mode: paymentMode
                     })}`;
@@ -988,7 +988,7 @@
 
         const fetchAndRenderServicesForAdd = async () => {
             try {
-                const res = await fetch('{{ route('api.services') }}');
+                const res = await fetch('{{ route('api.services', [], false) }}');
                 allAvailableServices = await res.json();
                 const serviceListContainer = getEl('service_list_container'); serviceListContainer.innerHTML = '';
 
@@ -1067,7 +1067,7 @@
 
             if (kodeMember.length > 0) {
                 try {
-                    const res = await fetch(`{{ route('api.member.validate') }}?kode_member=${encodeURIComponent(kodeMember)}`, {
+                    const res = await fetch(`{{ route('api.member.validate', [], false) }}?kode_member=${encodeURIComponent(kodeMember)}`, {
                         headers: { 'Accept': 'application/json' }
                     });
 
@@ -1291,7 +1291,7 @@
             confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memulai...';
 
             try {
-                const res = await fetch('{{ route('kasir.confirmPemesanan') }}', {
+                const res = await fetch('{{ route('kasir.confirmPemesanan', [], false) }}', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                     body: JSON.stringify(tempPemesananData) // Kirim data pemesanan dari initiate
@@ -1355,7 +1355,7 @@
         // BARU: Fungsi untuk mereset status meja via API
         const resetMejaStatus = async (mejaId, reservationToken) => {
             try {
-                const res = await fetch(`{{ url('/kasir/meja') }}/${mejaId}/reset-status`, {
+                const res = await fetch(`/kasir/meja/${mejaId}/reset-status`, {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' },
                     body: JSON.stringify({ reservation_token: reservationToken }),
@@ -1378,7 +1378,7 @@
             e.preventDefault(); const pId = getEl('add_duration_penyewaan_id').value; const addDur = getEl('additional_durasi_jam').value;
             const submitBtn = e.target.querySelector('button[type="submit"]'); submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menambah...';
             try {
-                const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${pId}/add-duration`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ additional_durasi_jam: addDur }) });
+                const res = await fetch(`/kasir/penyewaan/${pId}/add-duration`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ additional_durasi_jam: addDur }) });
                 const data = await res.json();
                 if (data.success) { Swal.fire('Berhasil!', data.message, 'success'); closeAddDurationModal(); fetchAndRenderMejas(); }
                 else { Swal.fire('Gagal!', data.message || 'Terjadi kesalahan.', 'error'); }
@@ -1411,7 +1411,7 @@
 
             const submitBtn = e.target.querySelector('button[type="submit"]'); submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menambah...';
             try {
-                const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${pId}/add-service`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ services: selSrv }) });
+                const res = await fetch(`/kasir/penyewaan/${pId}/add-service`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ services: selSrv }) });
                 const data = await res.json();
                 if (data.success) { Swal.fire('Berhasil!', data.message, 'success'); closeAddServiceModal(); fetchAndRenderMejas(); }
                 else { Swal.fire('Gagal!', data.message || 'Terjadi kesalahan.', 'error'); }
@@ -1434,7 +1434,7 @@
             submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
 
             try {
-                const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${pId}/bayar`, {
+                const res = await fetch(`/kasir/penyewaan/${pId}/bayar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                     body: JSON.stringify({ kode_kupon: kupon, payment_mode: paymentMode }) // Kirim kode kupon dan payment_mode ke backend
@@ -1473,7 +1473,7 @@
             qrisButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses QRIS...';
 
             try {
-                const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${penyewaanId}/bayar`, {
+                const res = await fetch(`/kasir/penyewaan/${penyewaanId}/bayar`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1519,7 +1519,7 @@
             const mejaBaruId = getEl('meja_baru_id').value;
 
             try {
-                const res = await fetch(`{{ url('/kasir/penyewaan') }}/${penyewaanId}/transfer-meja`, {
+                const res = await fetch(`/kasir/penyewaan/${penyewaanId}/transfer-meja`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                     body: JSON.stringify({ meja_baru_id: mejaBaruId })
@@ -1572,7 +1572,7 @@
 
         const performDeletePenyewaan = async (penyewaanId) => {
             try {
-                const res = await fetch(`{{ url('/kasir/penyewaan/') }}/${penyewaanId}/delete`, {
+                const res = await fetch(`/kasir/penyewaan/${penyewaanId}/delete`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
                 });
@@ -1586,7 +1586,7 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            getEl('formPesan').action = '{{ route('kasir.initiatePemesanan') }}'; // Pastikan aksi formPesan ke initiate
+            getEl('formPesan').action = '{{ route('kasir.initiatePemesanan', [], false) }}'; // Pastikan aksi formPesan ke initiate
             populatePaketsDropdown(memberData.valid);
             fetchAndRenderMejas();
             setInterval(fetchAndRenderMejas, 5000);

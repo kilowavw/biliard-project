@@ -139,6 +139,16 @@ class KasirBookingTest extends TestCase
             ->assertRedirect(route('dashboard.kasir'));
     }
 
+    public function test_kasir_booking_urls_are_same_origin_paths(): void
+    {
+        $this->signInKasir();
+
+        $this->get('/kasir')
+            ->assertOk()
+            ->assertSee('/kasir/penyewaan/initiate', false)
+            ->assertSee('/kasir/penyewaan/confirm', false);
+    }
+
     public function test_expired_reservation_is_released_without_changing_active_tables(): void
     {
         $this->signInKasir();
