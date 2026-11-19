@@ -118,27 +118,22 @@ class KasirController extends Controller
                 'diskon_member_persen' => 'nullable|numeric|min:0|max:100',
                 'reservation_token' => 'required|uuid',
             ]);
-            DB::beginTransaction();
             try {
-                $meja = Meja::whereKey($request->meja_id)->lockForUpdate()->firstOrFail();
+                $meja = Meja::findOrFail($request->meja_id);
                 $existingRental = Penyewaan::where('meja_id', $meja->id)
                     ->where('status', 'berlangsung')
                     ->where('reservation_token', $request->reservation_token)
                     ->first();
                 if ($existingRental) {
-                    DB::rollBack();
                     return response()->json(['message' => 'Pemesanan berhasil dimulai.', 'success' => true, 'idempotent' => true], 200);
                 }
                 if ($meja->status !== 'dipakai' || $meja->reservation_token !== $request->reservation_token) {
-                    DB::rollBack();
                     return response()->json(['message' => 'Meja tidak dalam status siap dikonfirmasi.', 'success' => false], 400);
                 }
                 if (!$meja->reservation_expires_at || $meja->reservation_expires_at->isPast()) {
-                    DB::rollBack();
                     return response()->json(['message' => 'Waktu konfirmasi pemesanan berakhir. Silakan mulai pemesanan kembali.', 'success' => false], 409);
                 }
                 if (Penyewaan::where('meja_id', $meja->id)->where('status', 'berlangsung')->exists()) {
-                    DB::rollBack();
                     return response()->json(['message' => 'Meja ini sudah memiliki penyewaan aktif.', 'success' => false], 409);
                 }
                 $hargaSetting = HargaSetting::latest()->first();
@@ -159,7 +154,6 @@ class KasirController extends Controller
                 } elseif ($request->tipe_pesanan === 'paket') {
                     $paket = Paket::find($request->paket_id);
                     if (!$paket || !$paket->aktif) {
-                        DB::rollBack();
                         throw ValidationException::withMessages(['paket_id' => 'Paket tidak ditemukan atau tidak aktif.']);
                     }
                     $paketId = $request->paket_id;
@@ -189,15 +183,13 @@ class KasirController extends Controller
                     }
                     // Dekremen stok service paket
                     foreach ($servicesToDecrement as $srvItem) {
-                        $service = Service::lockForUpdate()->find($srvItem['id']);
+                        $service = Service::find($srvItem['id']);
                         if (!$service) {
-                            DB::rollBack();
                             throw ValidationException::withMessages([
                                 'paket_id' => "Service '{$srvItem['nama']}' dalam paket tidak ditemukan atau tidak valid."
                             ]);
                         }
                         if ($service->stok < $srvItem['jumlah']) {
-                            DB::rollBack();
                             throw ValidationException::withMessages([
                                 'paket_id' => "Stok {$service->nama} kurang untuk paket. Tersedia: {$service->stok}."
                             ]);
@@ -206,7 +198,7 @@ class KasirController extends Controller
                     }
                     // ServiceDetailPaket sudah menjadi array, tinggal di-encode saat disimpan
                 }
-                Penyewaan::create([
+                $penyewaan = Penyewaan::create([
                     'meja_id' => $request->meja_id,
                     'nama_penyewa' => $request->nama_penyewa,
                     'durasi_jam' => $durasiJam,
@@ -227,14 +219,15 @@ class KasirController extends Controller
                     'reservation_token' => $request->reservation_token,
                 ]);
                 $meja->update(['reservation_token' => null, 'reservation_expires_at' => null]);
-                DB::commit();
-                return response()->json(['message' => 'Pemesanan berhasil dimulai.', 'success' => true], 200);
+                return response()->json([
+                    'message' => 'Pemesanan berhasil dimulai.',
+                    'success' => true,
+                    'penyewaan_id' => $penyewaan->id,
+                ], 200);
             } catch (ValidationException $e) {
-                DB::rollBack();
                 // Penting: Mengembalikan JSON dengan error detail
                 return response()->json(['message' => 'Validasi gagal!', 'errors' => $e->errors(), 'success' => false], 422);
             } catch (\Exception $e) {
-                if (DB::transactionLevel() > 0) DB::rollBack();
                 Log::error('Error confirm pemesanan by Kasir: ' . $e->getMessage() . ' File: ' . $e->getFile() . ' Line: . ' . $e->getLine());
                 return response()->json(['message' => 'Gagal mengkonfirmasi pemesanan. Silakan coba lagi.', 'success' => false], 500);
             }
