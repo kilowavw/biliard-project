@@ -1,34 +1,34 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('mejas', function (Blueprint $table) {
-            $table->uuid('reservation_token')->nullable()->index();
-            $table->timestamp('reservation_expires_at')->nullable()->index();
-        });
+        if (! Schema::hasColumn('mejas', 'reservation_token')) {
+            Schema::table('mejas', function ($table) {
+                $table->uuid('reservation_token')->nullable();
+            });
+        }
 
-        Schema::table('penyewaans', function (Blueprint $table) {
-            $table->uuid('reservation_token')->nullable()->index();
-        });
+        if (! Schema::hasColumn('mejas', 'reservation_expires_at')) {
+            Schema::table('mejas', function ($table) {
+                $table->timestamp('reservation_expires_at')->nullable();
+            });
+        }
+
+        if (! Schema::hasColumn('penyewaans', 'reservation_token')) {
+            Schema::table('penyewaans', function ($table) {
+                $table->uuid('reservation_token')->nullable();
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('mejas', function (Blueprint $table) {
-            $table->dropIndex(['reservation_token']);
-            $table->dropIndex(['reservation_expires_at']);
-            $table->dropColumn(['reservation_token', 'reservation_expires_at']);
-        });
-
-        Schema::table('penyewaans', function (Blueprint $table) {
-            $table->dropIndex(['reservation_token']);
-            $table->dropColumn('reservation_token');
-        });
+        // Columns may have existed before this migration ran, so dropping them
+        // here could remove data that this migration did not create.
     }
 };
